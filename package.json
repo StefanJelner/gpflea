@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "gpFlea (GitHub Pages Flea) is a superdupertiny flea size zero config static site generator for GitHub Pages",
   "main": "index.js",
+  "bin": "index.js",
   "scripts": {},
   "repository": {
     "type": "git",
@@ -39,6 +40,7 @@
     "glob": "^7.2.0",
     "handlebars": "^4.7.7",
     "highlight.js": "^11.5.0",
+    "html-minifier": "^4.0.0",
     "jsdom": "^19.0.0",
     "livereload": "^0.9.3",
     "lodash": "^4.17.21",
@@ -48,5 +50,8 @@
     "press-any-key": "^0.1.1",
     "sanitize-html": "^2.7.0",
     "sass": "^1.49.9"
-  }
+  },
+  "browserslist": [
+    "last 2 versions"
+  ]
 }

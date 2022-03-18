@@ -1,0 +1,15 @@
+{{#if (and pages (gt pages.length 0))}}
+    <ul class="navigation__list navigation__list--level{{level}}">
+        {{#each pages}}
+            <li class="navigation__list__item">
+                <a
+                    class="navigation__list__item__link"
+                    href="{{this.url}}"
+                >{{#each this.titles}}{{#if @last}}{{this}}{{/if}}{{/each}}</a>
+                {{#if (and this.pages (gt this.pages.length 0))}}
+                    {{> navigation pages=this.pages level=(math ../level '+' 1)}}
+                {{/if}}
+            </li>
+        {{/each}}
+    </ul>
+{{/if}}
