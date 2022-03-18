@@ -1,0 +1,52 @@
+{
+  "name": "gpflea",
+  "version": "0.0.1",
+  "description": "gpFlea (GitHub Pages Flea) is a superdupertiny flea size zero config static site generator for GitHub Pages",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StefanJelner/gpflea.git"
+  },
+  "keywords": [
+    "zero",
+    "config",
+    "static",
+    "site",
+    "generator",
+    "github",
+    "pages",
+    "node",
+    "handlebars",
+    "markdown",
+    "html",
+    "sass",
+    "blog"
+  ],
+  "author": "Stefan Jelner",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/StefanJelner/gpflea/issues"
+  },
+  "homepage": "https://github.com/StefanJelner/gpflea#readme",
+  "dependencies": {
+    "ansi-colors": "^4.1.1",
+    "autoprefixer": "^10.4.4",
+    "chokidar": "^3.5.3",
+    "express": "^4.17.3",
+    "fancy-log": "^2.0.0",
+    "fs-extra": "^10.0.1",
+    "glob": "^7.2.0",
+    "handlebars": "^4.7.7",
+    "highlight.js": "^11.5.0",
+    "jsdom": "^19.0.0",
+    "livereload": "^0.9.3",
+    "lodash": "^4.17.21",
+    "markdown-it": "^12.3.2",
+    "open": "^8.4.0",
+    "postcss": "^8.4.12",
+    "press-any-key": "^0.1.1",
+    "sanitize-html": "^2.7.0",
+    "sass": "^1.49.9"
+  }
+}
