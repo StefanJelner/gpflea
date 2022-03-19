@@ -28,6 +28,7 @@ const md = require('markdown-it')({
     }
     , html: true
 });
+const mila = require("markdown-it-link-attributes");
 const { minify } = require('html-minifier');
 const open = require('open');
 const path = require('path');
@@ -39,6 +40,8 @@ const postcss = require('postcss');
 const pressAnyKey = require('press-any-key');
 const sanitizeHtml = require('sanitize-html');
 const sass = require('sass');
+
+md.use(mila, { attrs: { target: '_blank', rel: 'noopener'}});
 
 const cwd = process.cwd();
 const package = require(path.resolve(__dirname, './package.json'));
@@ -306,16 +309,17 @@ function getPagesNavigation(pages, urlPrefixes, titles, pages, blogEntries, head
 function build() {
     fancyLog('Build started.');
 
-    fs.emptyDirSync(path.resolve(cwd, './docs'));
-    fancyLog(c.green('/docs folder deleted.'));
+    const docsTarget = path.resolve(cwd, './docs');
+    fs.emptyDirSync(docsTarget);
+    fancyLog(c.green(`${docsTarget} folder emtpied.`));
 
     glob.sync('./src/handlebars/helpers/**/*.js', { cwd }).forEach(filename => {
         require(path.resolve(cwd, filename))(handlebars);
     });
-    
     glob.sync('./src/handlebars/partials/**/*.hbs', { cwd }).forEach(filename => {
         handlebars.registerPartial(path.parse(filename).name, readFile(path.resolve(cwd, filename)));
     });
+    fancyLog(c.green('Handlebars set up.'));
     
     assets = require(path.resolve(cwd, './src/assets.json'));
 
@@ -365,14 +369,17 @@ function build() {
     const blogEntriesValues = Object.values(blogEntries);
 
     if (Object.keys(pages).length > 0 || blogEntriesValues.length > 0) {
-        fs.copySync(path.resolve(cwd, './src/assets'), path.resolve(cwd, './docs/assets'));
-        fancyLog(c.green('Assets folder copied.'));
+        const assetsSource = path.resolve(cwd, './src/assets');
+        const assetsTarget = path.resolve(cwd, './docs/assets');
+        fs.copySync(assetsSource, assetsTarget);
+        fancyLog(c.green(`${assetsSource} copied to ${assetsTarget}.`));
 
         Object.keys(assets).forEach(source => {
-            const target = assets[source];
+            const target = path.resolve(cwd, './docs/assets', assets[source]);
+            source = path.resolve(cwd, source);
 
-            fs.copySync(path.resolve(cwd, source), path.resolve(cwd, target));
-            fancyLog(c.green(`${source} copied.`));
+            fs.copySync(source, target);
+            fancyLog(c.green(`${source} copied to ${target}.`));
         });
 
         fs.ensureDirSync(path.resolve(cwd, './docs/assets/css'));
@@ -381,12 +388,13 @@ function build() {
             loadPaths: [path.resolve(cwd, './node_modules'), path.resolve(cwd, './src/scss')]
             , style: 'compressed'
         });
+        const sassTarget = path.resolve(cwd, './docs/assets/css/styles.css');
         fs.writeFileSync(
-            path.resolve(cwd, './docs/assets/css/styles.css')
+            sassTarget
             , postcss([autoprefixer]).process(css).css
             , 'utf8'
         );
-        fancyLog(c.green(`./docs/assets/css/styles.css written.`));
+        fancyLog(c.green(`${sassTarget} written.`));
 
         const header = handlebars.compile(readFile(path.resolve(cwd, './src/global/header.hbs')));
         const footer = handlebars.compile(readFile(path.resolve(cwd, './src/global/footer.hbs')));
