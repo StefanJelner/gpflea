@@ -50,7 +50,8 @@
     "postcss": "^8.4.12",
     "press-any-key": "^0.1.1",
     "sanitize-html": "^2.7.0",
-    "sass": "^1.49.9"
+    "sass": "^1.49.9",
+    "throttle-debounce": "^3.0.1"
   },
   "browserslist": [
     "last 2 versions"

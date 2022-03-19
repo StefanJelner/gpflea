@@ -40,8 +40,45 @@ const postcss = require('postcss');
 const pressAnyKey = require('press-any-key');
 const sanitizeHtml = require('sanitize-html');
 const sass = require('sass');
+const { debounce } = require('throttle-debounce');
 
 md.use(mila, { attrs: { target: '_blank', rel: 'noopener'}});
+
+function ConcurrentCalls() {
+    const queue = {};
+
+    function add(func) {
+        const queueKey = func.name;
+
+        if (!(queueKey in queue)) { queue[queueKey] = []; }
+
+        // every call after one call already waiting is just abandoned, because it is concurring to the waiting call.
+        if (queue[queueKey].length < 2) { queue[queueKey].push(func); }
+
+        // initial call or queue was empty.
+        if (queue[queueKey].length === 1) { _next(queueKey); }
+    }
+
+    function _next(queueKey) {
+        const result = queue[queueKey][0]();
+
+        if (typeof result !== 'undefined' && result instanceof Promise) {
+            result.then(() => _shift(queueKey));
+        } else {
+            _shift(queueKey);
+        }
+    }
+
+    function _shift(queueKey) {
+        queue[queueKey].shift();
+
+        if (queue[queueKey].length > 0) { _next(queueKey); }
+    }
+
+    return { add };
+}
+
+const queue = new ConcurrentCalls();
 
 const cwd = process.cwd();
 const package = require(path.resolve(__dirname, './package.json'));
@@ -434,7 +471,7 @@ function build() {
     fancyLog(c.green('Build finished.'));
 }
 
-build();
+queue.add(build);
 
 const app = express();
 app.use('/', express.static(path.resolve(cwd, './docs')));
@@ -442,6 +479,9 @@ app.get('/', (_, res) => { res.sendFile(path.resolve(path.resolve(cwd, './index.
 app.listen(ports.webServer, () => {
     livereload.createServer({ port: ports.livereloadServer }).watch(path.resolve(cwd, './docs'));
 
+    // when folders become unlinked the watcher can fire very quickly.
+    // this is why the calls to build() are debounced here by 1 second.
+    const buildDebounced = debounce(1000, () => queue.add(build));
     const watcher = chokidar.watch([path.resolve(cwd, './src')].concat(Object.keys(assets))).on(
         'all',
         (event, path2) => {
@@ -450,11 +490,11 @@ app.listen(ports.webServer, () => {
 
                 if (event === 'change' && path2 === path.resolve(cwd, './src/assets.json')) {
                     watcher.unwatch(Object.keys(assets)).then(() => {
-                        build();
+                        buildDebounced();
                         watcher.add(Object.keys(assets));
                     });
                 } else {
-                    build();
+                    buildDebounced();
                 }
             }
         }
@@ -464,7 +504,7 @@ app.listen(ports.webServer, () => {
 
     fancyLog(`Open ${c.magenta(url)} in your browser to browse your static pages.`);
 
-    pressAnyKey(c.red('Or press any key to open it automatically.')).then(() => {
+    pressAnyKey(c.red('Or press any key to open it automatically.\n')).then(() => {
         open(url);
     });
 });
