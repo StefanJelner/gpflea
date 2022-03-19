@@ -17,15 +17,7 @@ const hljs = require('highlight.js');
 const { JSDOM } = require('jsdom');
 const livereload = require('livereload');
 const md = require('markdown-it')({
-    highlight: (code, language) => {
-        if (typeof language !== 'undefined' && hljs.getLanguage(language) === true) {
-          try {
-            return `<pre><code>${hljs.highlight(code, { language, ignoreIllegals: true }).value}</code></pre>`;
-          } catch (err) {}
-        }
-    
-        return `<pre><code>${md.utils.escapeHtml(code)}</code></pre>`;
-    }
+    highlight: (code, language) => `<pre><code class="language-${language}">${md.utils.escapeHtml(code)}</code></pre>`
     , html: true
 });
 const mila = require("markdown-it-link-attributes");
@@ -41,6 +33,7 @@ const pressAnyKey = require('press-any-key');
 const sanitizeHtml = require('sanitize-html');
 const sass = require('sass');
 const { debounce } = require('throttle-debounce');
+const { result } = require('lodash');
 
 md.use(mila, { attrs: { target: '_blank', rel: 'noopener'}});
 
@@ -128,6 +121,14 @@ function getDatetime($body) {
     if ($datetime !== null) { return $datetime.getAttribute('datetime'); }
 
     return null;
+}
+
+function highlight($body) {
+    const $codes = $body.querySelectorAll('code[class^="language-"]');
+
+    if ($codes !== null) { Array.from($codes).forEach($code => hljs.highlightElement($code)); }
+
+    return $body;
 }
 
 function BEMify($body) {
@@ -303,6 +304,7 @@ function writePages(pagesPartial, urlPrefixes, titles, pages, blogEntries, heade
                     ? page.title
                     : []
             )
+            , type: 'page'
         };
         writeFile(path.resolve(cwd, `./docs/${
             urlPrefixes2.concat(
@@ -374,7 +376,7 @@ function build() {
         const $body = getDOMBody(parsed.ext === '.md' ? getSanitizedHTML(content) : content);
         const title = getTitle($body);
         const pageValues = {
-            $body: BEMify($body)
+            $body: BEMify(highlight($body))
             , title
             , type: 'file'
             , url: getURL(title)
@@ -403,7 +405,7 @@ function build() {
 
         if (datetime !== null) {
             blogEntries[parsed.base] = {
-                $body: BEMify($body)
+                $body: BEMify(highlight($body))
                 , anchor
                 , datetime: new Date(datetime)
                 , title
@@ -455,7 +457,7 @@ function build() {
         };
 
         const blogIndex = handlebars.compile(readFile(path.resolve(cwd, './src/pages/index.hbs')));
-        const tplVars = { navigation, titles: [`Blog (${blogEntriesValues.length} entries)`] };
+        const tplVars = { navigation, titles: [`Blog (${blogEntriesValues.length} entries)`], type: 'blog' };
         writeFile(
             path.resolve(cwd, './docs/index.html')
             , header
