@@ -1,0 +1,9 @@
+<ul class="blog">
+    {{#each entries}}
+        {{#if (and (gte @index ../firstIndex) (lte @index ../lastIndex))}}
+            <li class="blog__item">{{{this.html}}}</li>
+        {{/if}}
+    {{/each}}
+</ul>
+
+{{> pagination}}

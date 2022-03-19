@@ -6,6 +6,8 @@
  */
 const _ = require('lodash');
 const autoprefixer = require('autoprefixer');
+const blogEntriesPerPage = 10;
+const blogPaginationWindow = 10;
 const c = require('ansi-colors');
 const chokidar = require('chokidar');
 const express = require('express');
@@ -33,7 +35,7 @@ const pressAnyKey = require('press-any-key');
 const sanitizeHtml = require('sanitize-html');
 const sass = require('sass');
 const { debounce } = require('throttle-debounce');
-const { result } = require('lodash');
+const { result, omit } = require('lodash');
 
 md.use(mila, { attrs: { target: '_blank', rel: 'noopener'}});
 
@@ -349,6 +351,10 @@ function getPagesNavigation(pages, urlPrefixes, titles, pages, blogEntries, head
     return navigation;
 }
 
+function getBlogIndex(prefix, i, anchor) {
+    return `${prefix}index${(i > 0 ? `-${i + 1}` : '')}.html${typeof anchor !== 'undefined' ? `#${anchor}` : ''}`;
+}
+
 function build() {
     fancyLog('Build started.');
 
@@ -395,7 +401,7 @@ function build() {
         }
     });
 
-    glob.sync('./src/blog/**/*.@(html|md)', { cwd }).forEach(filename => {
+    glob.sync('./src/blog/**/*.@(html|md)', { cwd }).forEach((filename, i) => {
         const parsed = path.parse(filename);
         const content = readFile(filename);
         const $body = getDOMBody(parsed.ext === '.md' ? getSanitizedHTML(content) : content);
@@ -409,7 +415,6 @@ function build() {
                 , anchor
                 , datetime: new Date(datetime)
                 , title
-                , url: `/index.html#${anchor}`
             };
         }
     });
@@ -447,7 +452,15 @@ function build() {
         const header = handlebars.compile(readFile(path.resolve(cwd, './src/global/header.hbs')));
         const footer = handlebars.compile(readFile(path.resolve(cwd, './src/global/footer.hbs')));
 
-        const blogEntriesValuesSort = blogEntriesValues.sort((a, b) => b.datetime - a.datetime);
+        const blogEntriesValuesSort = blogEntriesValues.sort((a, b) => b.datetime - a.datetime).map((blogEntry, i) => ({
+            ..._.omit(blogEntry, ['$body'])
+            , html: `<a name="${
+                blogEntry.anchor
+            }"></a>${
+                findLinks(blogEntry.$body, pages, blogEntries).innerHTML
+            }`
+            , url: getBlogIndex('/', Math.floor(i / blogEntriesPerPage), blogEntry.anchor)
+        }));
         const navigation = {
             blog: blogEntriesValuesSort.map(blogEntry => ({
                 title: blogEntry.title
@@ -456,25 +469,58 @@ function build() {
             , pages: getPagesNavigation(pages, [], [], pages, blogEntries, header, footer)
         };
 
-        const blogIndex = handlebars.compile(readFile(path.resolve(cwd, './src/pages/index.hbs')));
-        const tplVars = { navigation, titles: [`Blog (${blogEntriesValues.length} entries)`], type: 'blog' };
-        writeFile(
-            path.resolve(cwd, './docs/index.html')
-            , header
-            , footer
-            , tplVars
-            , blogIndex({
+        const blogIndex = handlebars.compile(readFile(path.resolve(cwd, './src/blog.hbs')));
+        const tplVars = {
+            entriesPerPage: blogEntriesPerPage
+            , navigation
+            , titles: [`Blog (${blogEntriesValuesSort.length} entries)`]
+            , totalEntries: blogEntriesValuesSort.length
+            , totalPages: Math.ceil(blogEntriesValuesSort.length / blogEntriesPerPage)
+            , type: 'blog'
+        };
+        for (let i = 0; i < tplVars.totalPages; i++) {
+            const firstIndex = i * tplVars.entriesPerPage;
+            const lastIndex = Math.min(firstIndex + tplVars.entriesPerPage, tplVars.totalEntries) - 1;
+            const firstWindow = Math.floor(i / blogPaginationWindow);
+            const tplVars2 = {
                 ...tplVars
-                , entries: blogEntriesValuesSort.map(blogEntry => ({
-                    ...blogEntry
-                    , html: `<a name="${
-                        blogEntry.anchor
-                    }"></a>${
-                        findLinks(blogEntry.$body, pages, blogEntries).innerHTML
-                    }`
-                }))
-            })
-        );
+                , currentPage: i + 1
+                , firstIndex
+                , lastIndex
+                , titles: tplVars.titles.concat(`Page ${i + 1} (${firstIndex + 1} - ${lastIndex + 1})`)
+                , window: Array.from({ length: blogPaginationWindow }).reduce((result, empty, j) => {
+                    const k = (firstWindow * blogPaginationWindow) + j + 1;
+
+                    if (k <= tplVars.totalPages) { return result.concat(k); }
+
+                    return result;
+                }, [])
+            };
+
+            writeFile(
+                path.resolve(cwd, getBlogIndex('./docs/', i))
+                , header
+                , footer
+                , tplVars2
+                , blogIndex({
+                    ...tplVars2
+                    , entries: blogEntriesValuesSort
+                })
+            );
+
+            fs.writeFileSync(
+                path.resolve(cwd, `./docs/lazy-loading-${i + 1}.json`)
+                , JSON.stringify({
+                    currentPage: i + 1
+                    , entriesPerPage: tplVars.entriesPerPage
+                    , totalEntries: tplVars.totalEntries
+                    , totalPages: tplVars.totalPages
+                    , entriesPerPage: tplVars.entriesPerPage
+                    , entries: blogEntriesValuesSort.slice(firstIndex, lastIndex + 1)
+                })
+                , 'utf8'
+            );
+        }
 
         writePages(pages, [], [], pages, blogEntries, header, footer, navigation);
     }

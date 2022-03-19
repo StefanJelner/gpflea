@@ -1,0 +1,49 @@
+<nav class="pagination">
+    <ul class="pagination__list">
+        <li class="
+            pagination__list__item
+            pagination__list__item--first
+            {{#if (lte currentPage 1)}}pagination__list__item--disabled{{/if}}">
+            <a class="pagination__list__item__link" href="/">&lt;&lt; First</a>
+        </li>
+        <li class="
+            pagination__list__item
+            pagination__list__item--previous
+            {{#if (lte currentPage 1)}}pagination__list__item--disabled{{/if}}
+        ">
+            <a
+                class="pagination__list__item__link"
+                href="{{#if (lte currentPage 2)}}/{{else}}/index-{{math currentPage '-' 1}}.html{{/if}}"
+            >&lt; Previous</a>
+        </li>
+        {{#each window}}
+            <li class="
+                pagination__list__item
+                pagination__list__item--index
+                {{#if (eq this ../currentPage)}}pagination__list__item--active{{/if}}
+            ">
+                <a
+                    class="pagination__list__item__link"
+                    href="{{#if (lte this 1)}}/{{else}}/index-{{this}}.html{{/if}}"
+                >{{this}}</a>
+            </li>
+        {{/each}}
+        <li class="
+            pagination__list__item
+            pagination__list__item--next
+            {{#if (gte currentPage totalPages)}}pagination__list__item--disabled{{/if}}
+        ">
+            <a
+                class="pagination__list__item__link"
+                href="/index-{{#if (gte currentPage (math totalPages '-' 1))}}{{totalPages}}{{else}}{{math currentPage '+' 1}}{{/if}}.html"
+            >Next &gt;</a>
+        </li>
+        <li class="
+            pagination__list__item
+            pagination__list__item--last
+            {{#if (gte currentPage totalPages)}} pagination__list__item--disabled{{/if}}
+        ">
+            <a class="pagination__list__item__link" href="/index-{{totalPages}}.html">Last &gt;&gt;</a>
+        </li>
+    </ul>
+</nav>
