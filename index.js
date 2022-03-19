@@ -115,7 +115,11 @@ function getTitle($body) {
 }
 
 function getURL(title) {
-    return title.toLowerCase().replace(/[^a-z0-9\-]+/g, '-').replace(/-{2,}/g, '-');
+    if (typeof title === 'string') {
+        return title.toLowerCase().replace(/[^a-z0-9\-]+/g, '-').replace(/-{2,}/g, '-');
+    }
+
+    // @TODO add error handling here.
 }
 
 function getDatetime($body) {
@@ -267,7 +271,7 @@ function iteratePages(pagesPartial, indexes, level, urlPrefixes, titles, pages, 
                     , (
                         page === 'index'
                             ? indexes
-                            : indexes.concat('pages', i - 1)
+                            : indexes.concat('pages', i - (indexes.length === 0 ? 0 : 1))
                     ).slice(1)
                     , urlPrefixes
                     , titles
@@ -369,18 +373,23 @@ function build() {
         const content = readFile(filename);
         const $body = getDOMBody(parsed.ext === '.md' ? getSanitizedHTML(content) : content);
         const title = getTitle($body);
+        const pageValues = {
+            $body: BEMify($body)
+            , title
+            , type: 'file'
+            , url: getURL(title)
+        };
 
         if (title !== null) {
-            _.set(pages, objPath, {
-                ..._.get(pages, objPath, {})
-                , type: 'folder'
-                , [parsed.name]: {
-                    $body: BEMify($body)
-                    , title
-                    , type: 'file'
-                    , url: getURL(title)
-                }
-            });
+            if (objPath.length === 0) {
+                pages[parsed.name] = pageValues;
+            } else {
+                _.set(pages, objPath, {
+                    ..._.get(pages, objPath, {})
+                    , type: 'folder'
+                    , [parsed.name]: pageValues
+                });
+            }
         }
     });
 
