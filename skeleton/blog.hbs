@@ -15,4 +15,23 @@
     {{> pagination}}
 {{else}}
     {{{entry.html}}}
+
+    <nav class="prev-next">
+        <ul class="prev-next__list">
+            {{#if previousEntry}}
+                <li class="prev-next__list__item prev-next__list__item--previous">
+                    <a class="prev-next__list__item__link" href="{{previousEntry.url}}">
+                        {{previousEntry.subtitle}} - {{previousEntry.title}}
+                    </a>
+                </li>
+            {{/if}}
+            {{#if nextEntry}}
+                <li class="prev-next__list__item prev-next__list__item--next">
+                    <a class="prev-next__list__item__link" href="{{nextEntry.url}}">
+                        {{nextEntry.subtitle}} - {{nextEntry.title}}
+                    </a>
+                </li>
+            {{/if}}
+        </ul>
+    </nav>
 {{/if}}

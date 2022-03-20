@@ -487,9 +487,15 @@ function build() {
             , type: 'blog'
         };
 
-        blogEntriesValuesSort.forEach(blogEntry => {
+        blogEntriesValuesSort.forEach((blogEntry, i) => {
             const tplVarsEntry = {
                 ...tplVars
+                , nextEntry: i < tplVars.totalEntries
+                    ? blogEntriesValuesSort[i + 1]
+                    : false
+                , previousEntry: i > 0
+                    ? blogEntriesValuesSort[i - 1]
+                    : false
                 , titles: [blogEntry.subtitle, blogEntry.title]
             };
 
