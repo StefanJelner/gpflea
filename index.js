@@ -413,7 +413,7 @@ function build() {
         const $body = getDOMBody(parsed.ext === '.md' ? getSanitizedHTML(content) : content);
         const title = getTitle($body);
         const datetime = getDatetime($body);
-        const anchor = getURL(`${datetime}-${title}`);
+        const anchor = getURL(`${datetime.machine}-${title}`);
 
         if (datetime !== null) {
             blogEntries[parsed.base] = {
