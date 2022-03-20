@@ -2,7 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>Untitled{{#each titles}} - {{this}}{{/each}}</title>
+    <title>
+        Untitled
+        {{#if (eq type 'blog')}}
+            {{#if (eq blogType 'list')}}
+                - Blog ({{totalEntries}} entries)
+                - Page {{currentPage}}
+                (entries
+                {{math firstIndex '+' 1}}
+                to
+                {{math lastIndex '+' 1}},
+                {{#with (lookup entries firstIndex)}}{{this.subtitle}}{{/with}}
+                to
+                {{#with (lookup entries lastIndex)}}{{this.subtitle}}{{/with}}) 
+            {{else}}
+                - {{entry.subtitle}} - {{entry.title}}
+            {{/if}}
+        {{else}}
+            {{#each titles}} - {{this}}{{/each}}
+        {{/if}}
+    </title>
     <link rel="stylesheet" href="/assets/css/styles.css" />
 </head>
 <body>

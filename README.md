@@ -110,6 +110,7 @@ On the first run, the skeleton becomes copied into the `./src` folder. The initi
     - operators.js
   + partials
     - navigation.hbs
+    - pagination.hbs
 + pages
   + 03-projects
     - index.md
@@ -122,6 +123,8 @@ On the first run, the skeleton becomes copied into the `./src` folder. The initi
 ```
 
 This is not a lot of biolerplate!
+
+Be aware of the fact, that there is no styling at all. If you look at the initial data in the browser it is totally unstyled.
 
 ---
 

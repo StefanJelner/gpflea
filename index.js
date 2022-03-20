@@ -481,7 +481,6 @@ function build() {
         const tplVars = {
             entriesPerPage: blogEntriesPerPage
             , navigation
-            , titles: [`Blog (${blogEntriesValuesSort.length} entries)`]
             , totalEntries: blogEntriesValuesSort.length
             , totalPages: Math.ceil(blogEntriesValuesSort.length / blogEntriesPerPage)
             , type: 'blog'
@@ -490,13 +489,14 @@ function build() {
         blogEntriesValuesSort.forEach((blogEntry, i) => {
             const tplVarsEntry = {
                 ...tplVars
+                , blogType: 'entry'
+                , entry: blogEntry
                 , nextEntry: i < tplVars.totalEntries
                     ? blogEntriesValuesSort[i + 1]
                     : false
                 , previousEntry: i > 0
                     ? blogEntriesValuesSort[i - 1]
                     : false
-                , titles: [blogEntry.subtitle, blogEntry.title]
             };
 
             writeFile(
@@ -504,11 +504,7 @@ function build() {
                 , header
                 , footer
                 , tplVarsEntry
-                , blogIndex({
-                    ...tplVarsEntry
-                    , blogType: 'entry'
-                    , entry: blogEntry
-                })
+                , blogIndex(tplVarsEntry)
             );
         });
 
@@ -520,10 +516,11 @@ function build() {
             const windowStart = Math.max(windowMiddle, Math.min(tplVars.totalPages - windowMiddle + 1, i + 1));
             const tplVarsList = {
                 ...tplVars
+                , blogType: 'list'
                 , currentPage: i + 1
+                , entries: blogEntriesValuesSort
                 , firstIndex
                 , lastIndex
-                , titles: tplVars.titles.concat(`Page ${i + 1} (${firstIndex + 1} - ${lastIndex + 1})`)
                 , window: Array.from({ length: blogPaginationWindow }).reduce((result, empty, j) => {
                     const k = windowStart - windowMiddle + j + 1;
 
@@ -538,11 +535,7 @@ function build() {
                 , header
                 , footer
                 , tplVarsList
-                , blogIndex({
-                    ...tplVarsList
-                    , blogType: 'list'
-                    , entries: blogEntriesValuesSort
-                })
+                , blogIndex(tplVarsList)
             );
 
             fs.writeFileSync(
