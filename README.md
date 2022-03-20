@@ -49,6 +49,7 @@ All the user needs to know is how to install a node module, create folders and f
 - Watches on file changes, then reloads the page in the browser.
 - Generates static pages with SEO friendly file names.
 - Header, footer and blog entries are generated from [Handlebars](https://handlebarsjs.com/) files.
+- All language specific data of gpFlea is in the [Handlebars](https://handlebarsjs.com/) templates.
 - Uses [Sass](https://sass-lang.com/) for providing CSS. (In the [Sass](https://sass-lang.com/) file pure CSS can be used, if someone is not familiar with [Sass](https://sass-lang.com/).)
 - HTML, inline CSS and inline JS are compressed.
 - CSS from [Sass](https://sass-lang.com/) compilation contains autoprefixing for the recent 2 browser generations.
@@ -61,7 +62,6 @@ All the user needs to know is how to install a node module, create folders and f
 ## <a name="todos"></a> Todos/Work In Progress
 
 - Complete `README.md`.
-- Better error handling.
 - [JSDoc](https://jsdoc.app/) comments.
 - Unit tests with [Jest](https://jestjs.io/).
 - Examples with [Disqus](https://disqus.com/pricing/) integration (and similar services) into the blog.

@@ -36,7 +36,6 @@ const pressAnyKey = require('press-any-key');
 const sanitizeHtml = require('sanitize-html');
 const sass = require('sass');
 const { debounce } = require('throttle-debounce');
-const { result, omit } = require('lodash');
 
 md.use(mila, { attrs: { target: '_blank', rel: 'noopener'}});
 
@@ -55,6 +54,8 @@ function ConcurrentCalls() {
         if (queue[queueKey].length === 1) { _next(queueKey); }
     }
 
+    function reset() { Object.keys(queue).forEach(key => delete queue[key]); }
+
     function _next(queueKey) {
         const result = queue[queueKey][0]();
 
@@ -71,10 +72,17 @@ function ConcurrentCalls() {
         if (queue[queueKey].length > 0) { _next(queueKey); }
     }
 
-    return { add };
+    return { add, reset };
 }
 
 const queue = new ConcurrentCalls();
+
+// Even it is not recommended, but here we try to handle uncaught exceptions as smoothly as possible to prevent
+// the whole process from crashing in an ugly way. 
+process.on('uncaughtException', error => {
+    fancyLog(c.red(error));
+    queue.reset();
+});
 
 const cwd = process.cwd();
 const package = require(path.resolve(__dirname, './package.json'));
@@ -110,13 +118,7 @@ function getTitle($body) {
     return null;
 }
 
-function getURL(title) {
-    if (typeof title === 'string') {
-        return title.toLowerCase().replace(/[^a-z0-9\-]+/g, '-').replace(/-{2,}/g, '-');
-    }
-
-    // @TODO add error handling here.
-}
+function getURL(title) { return title.toLowerCase().replace(/[^a-z0-9\-]+/g, '-').replace(/-{2,}/g, '-'); }
 
 function getDatetime($body) {
     const $datetime = $body.querySelector('time[datetime]');
