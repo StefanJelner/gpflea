@@ -121,7 +121,12 @@ function getURL(title) {
 function getDatetime($body) {
     const $datetime = $body.querySelector('time[datetime]');
 
-    if ($datetime !== null) { return $datetime.getAttribute('datetime'); }
+    if ($datetime !== null) {
+        return {
+            machine: $datetime.getAttribute('datetime')
+            , human: $datetime.innerHTML
+        };
+    }
 
     return null;
 }
@@ -414,7 +419,8 @@ function build() {
             blogEntries[parsed.base] = {
                 $body: BEMify(highlight($body))
                 , anchor
-                , datetime: new Date(datetime)
+                , datetime: new Date(datetime.machine)
+                , subtitle: datetime.human
                 , title
                 , url: `/${anchor}.html`
             };
@@ -482,13 +488,18 @@ function build() {
         };
 
         blogEntriesValuesSort.forEach(blogEntry => {
+            const tplVarsEntry = {
+                ...tplVars
+                , titles: [blogEntry.subtitle, blogEntry.title]
+            };
+
             writeFile(
                 path.resolve(cwd,  `./docs${blogEntry.url}`)
                 , header
                 , footer
-                , tplVars
+                , tplVarsEntry
                 , blogIndex({
-                    ...tplVars
+                    ...tplVarsEntry
                     , blogType: 'entry'
                     , entry: blogEntry
                 })
@@ -501,7 +512,7 @@ function build() {
             const firstIndex = i * tplVars.entriesPerPage;
             const lastIndex = Math.min(firstIndex + tplVars.entriesPerPage, tplVars.totalEntries) - 1;
             const windowStart = Math.max(windowMiddle, Math.min(tplVars.totalPages - windowMiddle + 1, i + 1));
-            const tplVars2 = {
+            const tplVarsList = {
                 ...tplVars
                 , currentPage: i + 1
                 , firstIndex
@@ -520,9 +531,9 @@ function build() {
                 path.resolve(cwd, getBlogIndex('./docs/', i))
                 , header
                 , footer
-                , tplVars2
+                , tplVarsList
                 , blogIndex({
-                    ...tplVars2
+                    ...tplVarsList
                     , blogType: 'list'
                     , entries: blogEntriesValuesSort
                 })
