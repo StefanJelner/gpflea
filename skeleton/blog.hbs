@@ -5,7 +5,7 @@
         {{#each entries}}
             {{#if (and (gte @index ../firstIndex) (lte @index ../lastIndex))}}
                 <li class="blog__item" id="{{this.anchor}}">
-                    {{{this.html}}}
+                    {{{this.short}}}
                     <p class="paragraph"><a class="link link--more" href="{{this.url}}">More</a></p>
                 </li>
             {{/if}}

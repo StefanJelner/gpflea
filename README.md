@@ -39,7 +39,7 @@ All the user needs to know is how to install a node module, create folders and f
 - Zero config - **really zero!**
 - Everything is done by convention. (See [Convention over configuration](https://en.wikipedia.org/wiki/Convention_over_configuration).)
 - Provides a blog on the homepage and unlimited nested pages.
-- The blog is paginated by 10 and JSON files are provided for lazy loading.
+- The blog is paginated by 10 and JSON files are provided for lazy loading. Blog entries can optionally contain a short version for the list and a long version for the details view.
 - Pages and blog entries can be written in Markdown or - if more sophisticated things like custom CSS or JS are needed - also in HTML.
 - No login required.
 - No backend needed.

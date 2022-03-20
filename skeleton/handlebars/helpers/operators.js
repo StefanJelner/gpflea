@@ -22,13 +22,13 @@ module.exports = function(handlebars) {
 
     handlebars.registerHelper({
         // IMPORTANT! THIS DOES NOT WORK WITH ARROW FUNCTIONS!
-        eq  : function() { return reduceOp(arguments, (a,b) => a === b); }
-        , ne  : function() { return reduceOp(arguments, (a,b) => a !== b); }
-        , lt  : function() { return reduceOp(arguments, (a,b) => a  <  b); }
-        , gt  : function() { return reduceOp(arguments, (a,b) => a  >  b); }
-        , lte : function() { return reduceOp(arguments, (a,b) => a  <= b); }
-        , gte : function() { return reduceOp(arguments, (a,b) => a  >= b); }
-        , and : function() { return reduceOp(arguments, (a,b) => a  && b); }
-        , or  : function() { return reduceOp(arguments, (a,b) => a  || b); }
+        eq  : function() { return reduceOp(arguments, (a, b) => a === b); }
+        , ne  : function() { return reduceOp(arguments, (a, b) => a !== b); }
+        , lt  : function() { return reduceOp(arguments, (a, b) => a  <  b); }
+        , gt  : function() { return reduceOp(arguments, (a, b) => a  >  b); }
+        , lte : function() { return reduceOp(arguments, (a, b) => a  <= b); }
+        , gte : function() { return reduceOp(arguments, (a, b) => a  >= b); }
+        , and : function() { return reduceOp(arguments, (a, b) => a  && b); }
+        , or  : function() { return reduceOp(arguments, (a, b) => a  || b); }
     });
 }

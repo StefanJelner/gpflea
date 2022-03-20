@@ -363,6 +363,40 @@ function getBlogIndex(prefix, i, anchor) {
     return `${prefix}index${(i > 0 ? `-${i + 1}` : '')}.html${typeof anchor !== 'undefined' ? `#${anchor}` : ''}`;
 }
 
+function getHTML($body) {
+    const $h1s = $body.querySelectorAll('h1');
+
+    if ($h1s !== null && Array.from($h1s).length > 1) {
+        // create a deep clone, so we leave the original element untouched
+        const $clone = $body.cloneNode(true);
+        const $h1 = Array.from($clone.querySelectorAll('h1'))[1];
+
+        while ($h1.previousSibling !== null) { $h1.parentNode.removeChild($h1.previousSibling); }
+
+        return $clone;
+    }
+
+    return $body;
+}
+
+function getShort($body) {
+    const $h1s = $body.querySelectorAll('h1');
+
+    if ($h1s !== null && Array.from($h1s).length > 1) {
+        // create a deep clone, so we leave the original element untouched
+        const $clone = $body.cloneNode(true);
+        const $previous = Array.from($clone.querySelectorAll('h1'))[1].previousSibling;
+
+        while ($previous.nextSibling !== null) {
+            $previous.parentNode.removeChild($previous.nextSibling);
+        }
+
+        return $clone;
+    }
+
+    return $body;
+}
+
 function build() {
     fancyLog('Build started.');
 
@@ -467,8 +501,9 @@ function build() {
         ).map(
             (blogEntry, i) => ({
                 ..._.omit(blogEntry, ['$body'])
-                , html: findLinks(blogEntry.$body, pages, blogEntries).innerHTML
+                , html: findLinks(getHTML(blogEntry.$body), pages, blogEntries).innerHTML
                 , indexUrl: getBlogIndex('/', Math.floor(i / blogEntriesPerPage), blogEntry.anchor)
+                , short: findLinks(getShort(blogEntry.$body), pages, blogEntries).innerHTML
             })
         );
         const navigation = {
