@@ -7,7 +7,8 @@
 const _ = require('lodash');
 const autoprefixer = require('autoprefixer');
 const blogEntriesPerPage = 10;
-const blogPaginationWindow = 10;
+// it has to be an odd number, otherwise there is no middle
+const blogPaginationWindow = 9;
 const c = require('ansi-colors');
 const chokidar = require('chokidar');
 const express = require('express');
@@ -415,6 +416,7 @@ function build() {
                 , anchor
                 , datetime: new Date(datetime)
                 , title
+                , url: `/${anchor}.html`
             };
         }
     });
@@ -452,15 +454,15 @@ function build() {
         const header = handlebars.compile(readFile(path.resolve(cwd, './src/global/header.hbs')));
         const footer = handlebars.compile(readFile(path.resolve(cwd, './src/global/footer.hbs')));
 
-        const blogEntriesValuesSort = blogEntriesValues.sort((a, b) => b.datetime - a.datetime).map((blogEntry, i) => ({
-            ..._.omit(blogEntry, ['$body'])
-            , html: `<a name="${
-                blogEntry.anchor
-            }"></a>${
-                findLinks(blogEntry.$body, pages, blogEntries).innerHTML
-            }`
-            , url: getBlogIndex('/', Math.floor(i / blogEntriesPerPage), blogEntry.anchor)
-        }));
+        const blogEntriesValuesSort = blogEntriesValues.sort(
+            (a, b) => b.datetime - a.datetime
+        ).map(
+            (blogEntry, i) => ({
+                ..._.omit(blogEntry, ['$body'])
+                , html: findLinks(blogEntry.$body, pages, blogEntries).innerHTML
+                , indexUrl: getBlogIndex('/', Math.floor(i / blogEntriesPerPage), blogEntry.anchor)
+            })
+        );
         const navigation = {
             blog: blogEntriesValuesSort.map(blogEntry => ({
                 title: blogEntry.title
@@ -478,10 +480,27 @@ function build() {
             , totalPages: Math.ceil(blogEntriesValuesSort.length / blogEntriesPerPage)
             , type: 'blog'
         };
+
+        blogEntriesValuesSort.forEach(blogEntry => {
+            writeFile(
+                path.resolve(cwd,  `./docs${blogEntry.url}`)
+                , header
+                , footer
+                , tplVars
+                , blogIndex({
+                    ...tplVars
+                    , blogType: 'entry'
+                    , entry: blogEntry
+                })
+            );
+        });
+
+        const windowMiddle = Math.ceil(blogPaginationWindow / 2);
+
         for (let i = 0; i < tplVars.totalPages; i++) {
             const firstIndex = i * tplVars.entriesPerPage;
             const lastIndex = Math.min(firstIndex + tplVars.entriesPerPage, tplVars.totalEntries) - 1;
-            const firstWindow = Math.floor(i / blogPaginationWindow);
+            const windowStart = Math.max(windowMiddle, Math.min(tplVars.totalPages - windowMiddle + 1, i + 1));
             const tplVars2 = {
                 ...tplVars
                 , currentPage: i + 1
@@ -489,7 +508,7 @@ function build() {
                 , lastIndex
                 , titles: tplVars.titles.concat(`Page ${i + 1} (${firstIndex + 1} - ${lastIndex + 1})`)
                 , window: Array.from({ length: blogPaginationWindow }).reduce((result, empty, j) => {
-                    const k = (firstWindow * blogPaginationWindow) + j + 1;
+                    const k = windowStart - windowMiddle + j + 1;
 
                     if (k <= tplVars.totalPages) { return result.concat(k); }
 
@@ -504,6 +523,7 @@ function build() {
                 , tplVars2
                 , blogIndex({
                     ...tplVars2
+                    , blogType: 'list'
                     , entries: blogEntriesValuesSort
                 })
             );

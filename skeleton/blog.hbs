@@ -1,9 +1,18 @@
-<ul class="blog">
-    {{#each entries}}
-        {{#if (and (gte @index ../firstIndex) (lte @index ../lastIndex))}}
-            <li class="blog__item">{{{this.html}}}</li>
-        {{/if}}
-    {{/each}}
-</ul>
+{{#if (eq blogType 'list')}}
+    {{> pagination}}
 
-{{> pagination}}
+    <ul class="blog">
+        {{#each entries}}
+            {{#if (and (gte @index ../firstIndex) (lte @index ../lastIndex))}}
+                <li class="blog__item" id="{{this.anchor}}">
+                    {{{this.html}}}
+                    <p class="paragraph"><a class="link link--more" href="{{this.url}}">More</a></p>
+                </li>
+            {{/if}}
+        {{/each}}
+    </ul>
+
+    {{> pagination}}
+{{else}}
+    {{{entry.html}}}
+{{/if}}
