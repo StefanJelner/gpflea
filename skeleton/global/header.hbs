@@ -26,9 +26,39 @@
 </head>
 <body>
     <aside class="aside">
-        <nav class="navigation">
-            <a href="/">Homepage</a>
-            {{> navigation pages=navigation.pages level=1}}
-        </nav>
+        <a class="link--homepage" href="/">Homepage</a>
+        {{#if (and navigation.pages (gt navigation.pages.length 0))}}
+            <nav class="navigation">
+                {{> navigation pages=navigation.pages level=1}}
+            </nav>
+        {{/if}}
+        {{#if (and navigation.blog (gt navigation.blog.length 0))}}
+            <nav class="latest">
+                <ul class="latest__list">
+                    {{#each navigation.blog}}
+                        {{#if (lt @index 5)}}
+                            <li class="latest__list__item">
+                                <a class="latest__list__item__link" href="{{this.url}}">
+                                    {{this.subtitle}} - {{this.title}}
+                                </a>
+                            </li>
+                        {{/if}}
+                    {{/each}}
+                </ul>
+            </nav>
+        {{/if}}
+        {{#if (and navigation.hashtags (gt navigation.hashtags.length 0))}}
+            <nav class="hashtags">
+                <ul class="hashtags__list">
+                    {{#each navigation.hashtags}}
+                        <li class="hashtags__list__item">
+                            <a class="hashtags__list__item__link" href="{{this.url}}">
+                                #{{this.hashtag}} ({{this.count}})
+                            </a>
+                        </li>
+                    {{/each}}
+                </ul>
+            </nav>
+        {{/if}}
     </aside>
-    <main class="main main--{{type}}"">
+    <main class="main main--{{type}}">

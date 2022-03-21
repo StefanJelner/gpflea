@@ -17,10 +17,11 @@ gpFlea (GitHub Pages Flea) is a superdupertiny flea size zero config static site
   3. [Providing CSS and JavaScript](#css-javascript)
   4. [Editing pages](#editing-pages)
   5. [Editing blog entries](#editing-blog-entries)
-  6. [Adding syntax highlighting](#syntax-highlighting)
-  7. [Blog pagination or lazy loading](#blog-pagination-lazy-loading)
-  8. [Handlebars partials and helpers](#handlebars-partials-helpers)
-  9. [Advanced Sass Techniques (BEM)](#sass-bem)
+  6. [Using hashtags](#using-hashtags)
+  7. [Adding syntax highlighting](#syntax-highlighting)
+  8. [Blog pagination or lazy loading](#blog-pagination-lazy-loading)
+  9. [Handlebars partials and helpers](#handlebars-partials-helpers)
+  10. [Advanced Sass Techniques (BEM)](#sass-bem)
 - [Technologies](#technologies)
 - [License](#license)
 
@@ -39,8 +40,11 @@ All the user needs to know is how to install a node module, create folders and f
 - Zero config - **really zero!**
 - Everything is done by convention. (See [Convention over configuration](https://en.wikipedia.org/wiki/Convention_over_configuration).)
 - Provides a blog on the homepage and unlimited nested pages.
-- The blog is paginated by 10 and JSON files are provided for lazy loading. Blog entries can optionally contain a short version for the list and a long version for the details view.
+- The blog is paginated by 10 and numbered JSON files - each containing 10 entries - are provided for lazy loading.
+- Blog entries can optionally contain a short version for the list and a long version for the details view.
+- Finds hashtags and generates pages which show in which articles a hashtag is used.
 - Pages and blog entries can be written in Markdown or - if more sophisticated things like custom CSS or JS are needed - also in HTML.
+- Does syntax highlighting in code blocks.
 - No login required.
 - No backend needed.
 - Everything is done on the file level.
@@ -55,7 +59,7 @@ All the user needs to know is how to install a node module, create folders and f
 - CSS from [Sass](https://sass-lang.com/) compilation contains autoprefixing for the recent 2 browser generations.
 - [BEM](http://getbem.com/introduction/) classes are automatically added to the HTML.
 - Resolution of links in the final static pages is done automatically.
-- [Handlebars](https://handlebarsjs.com/) partials and helpers can be added (math and operators helpers are already provided).
+- [Handlebars](https://handlebarsjs.com/) partials and helpers can be added (`math` and operators helpers are already provided).
 
 ---
 
@@ -64,6 +68,7 @@ All the user needs to know is how to install a node module, create folders and f
 - Complete `README.md`.
 - [JSDoc](https://jsdoc.app/) comments.
 - Unit tests with [Jest](https://jestjs.io/).
+- Adding an external search service
 - Examples with [Disqus](https://disqus.com/pricing/) integration (and similar services) into the blog.
 
 ---
@@ -120,6 +125,7 @@ On the first run, the skeleton becomes copied into the `./src` folder. The initi
   - styles.scss
 - assets.json
 - blog.hbs
+- hashtag.hbs
 ```
 
 This is not a lot of biolerplate!

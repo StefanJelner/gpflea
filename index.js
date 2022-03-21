@@ -18,10 +18,16 @@ const glob = require('glob');
 const handlebars = require("handlebars");
 const hljs = require('highlight.js');
 const { JSDOM } = require('jsdom');
+const linkify = require('linkifyjs');
+const linkifyHtml = require('linkify-html');
+require('linkify-plugin-hashtag');
 const livereload = require('livereload');
 const md = require('markdown-it')({
     highlight: (code, language) => `<pre><code class="language-${language}">${md.utils.escapeHtml(code)}</code></pre>`
     , html: true
+    // the default is false, but because we use another linkify system we have to make sure for future versions
+    // that is explicitely false.
+    , linkify: false
 });
 const mila = require("markdown-it-link-attributes");
 const { minify } = require('html-minifier');
@@ -124,10 +130,7 @@ function getDatetime($body) {
     const $datetime = $body.querySelector('time[datetime]');
 
     if ($datetime !== null) {
-        return {
-            machine: $datetime.getAttribute('datetime')
-            , human: $datetime.innerHTML
-        };
+        return { machine: $datetime.getAttribute('datetime'), human: $datetime.innerHTML };
     }
 
     return null;
@@ -144,6 +147,7 @@ function highlight($body) {
 function BEMify($body) {
     const mapping = {
         a: 'link'
+        , 'a[href^="/hashtag-"]': 'link--hashtag'
         , 'b, strong': 'bold'
         , blockquote: 'blockquote'
         , code: 'code'
@@ -192,12 +196,7 @@ function writeFile(filename, header, footer, tplVars, content) {
         filename
         , minify(
             header(tplVars) + content + footer(tplVars)
-            , {
-                collapseWhitespace: true
-                , minifyCSS: true
-                , minifyJS: true
-                , removeComments: true
-            }
+            , { collapseWhitespace: true, minifyCSS: true, minifyJS: true, removeComments: true }
         ).replace(/(<\/head>)/i, `${getLivereloadHTML()}${addGenerator()}$1`)
         , 'utf8'
     );
@@ -226,9 +225,7 @@ function findLinks($body, pages, blogEntries) {
             }
 
             if ($link.href.slice(0, 6) === '/blog/') {
-                if (parsed.base in blogEntries) {
-                    $link.href = blogEntries[parsed.base].url;
-                }
+                if (parsed.base in blogEntries) { $link.href = blogEntries[parsed.base].url; }
             }
         });
     }
@@ -280,9 +277,7 @@ function iteratePages(pagesPartial, indexes, level, urlPrefixes, titles, pages, 
                 callback(
                     pagesPartial[page]
                     , (
-                        page === 'index'
-                            ? indexes
-                            : indexes.concat('pages', i - (indexes.length === 0 ? 0 : 1))
+                        page === 'index' ? indexes : indexes.concat('pages', i - (indexes.length === 0 ? 0 : 1))
                     ).slice(1)
                     , urlPrefixes
                     , titles
@@ -309,19 +304,12 @@ function writePages(pagesPartial, urlPrefixes, titles, pages, blogEntries, heade
     ) => {
         const tplVars = {
             navigation
-            , titles: titles2.concat(
-                titles2[titles2.length - 1] !== page.title
-                    ? page.title
-                    : []
-            )
+            , titles: titles2.concat(titles2[titles2.length - 1] !== page.title ? page.title : [])
             , type: 'page'
         };
+
         writeFile(path.resolve(cwd, `./docs/${
-            urlPrefixes2.concat(
-                urlPrefixes2[urlPrefixes2.length - 1] !== page.url
-                    ? page.url
-                    : []
-            ).join('-')
+            urlPrefixes2.concat(urlPrefixes2[urlPrefixes2.length - 1] !== page.url ? page.url : []).join('-')
         }.html`), header2, footer2, tplVars, findLinks(page.$body, pages2, blogEntries2).innerHTML);
     });
 }
@@ -335,25 +323,10 @@ function getPagesNavigation(pages, urlPrefixes, titles, pages, blogEntries, head
         , urlPrefixes2
         , titles2
     ) => {
-        const titles3 = titles2.concat(
-            titles2[titles2.length - 1] !== page.title
-                ? page.title
-                : []
-        );
-        const urlPrefixes3 = urlPrefixes2.concat(
-            urlPrefixes2[urlPrefixes2.length - 1] !== page.url
-                ? page.url
-                : []
-        );
+        const titles3 = titles2.concat(titles2[titles2.length - 1] !== page.title ? page.title : []);
+        const urlPrefixes3 = urlPrefixes2.concat(urlPrefixes2[urlPrefixes2.length - 1] !== page.url ? page.url : []);
 
-        _.set(
-            navigation
-            , indexes
-            , {
-                titles: titles3
-                , url: `/${urlPrefixes3.join('-')}.html`
-            }
-        );
+        _.set(navigation, indexes, { titles: titles3 , url: `/${urlPrefixes3.join('-')}.html` });
     });
 
     return navigation;
@@ -387,14 +360,51 @@ function getShort($body) {
         const $clone = $body.cloneNode(true);
         const $previous = Array.from($clone.querySelectorAll('h1'))[1].previousSibling;
 
-        while ($previous.nextSibling !== null) {
-            $previous.parentNode.removeChild($previous.nextSibling);
-        }
+        while ($previous.nextSibling !== null) { $previous.parentNode.removeChild($previous.nextSibling); }
 
         return $clone;
     }
 
     return $body;
+}
+
+function getHashtagURL(hashtag) {
+    return `/hashtag-${getURL(hashtag)}.html`;
+}
+
+function transformHashtags(hashtags, objPath, html) {
+    return linkifyHtml(html, {
+        formatHref: {
+            hashtag: (href, type) => {
+                if (type === 'hashtag') { return getHashtagURL(href.slice(1)); }
+              
+                return href;
+            }
+        }
+        , validate: {
+            email: false
+            , hashtag: href => {
+                const hashtag = href.slice(1);
+                const objPathFlattened = objPath.join('/');
+
+                if (!(hashtag in hashtags)) {
+                    hashtags[hashtag] = { count: 0, pagesEntries: {}, url: getHashtagURL(hashtag) };
+                }
+
+                if (!(objPathFlattened in hashtags[hashtag].pagesEntries)) {
+                    hashtags[hashtag].pagesEntries[objPathFlattened] = { count: 0, objPath };
+                }
+
+                hashtags[hashtag].count++;
+                hashtags[hashtag].pagesEntries[objPathFlattened].count++;
+
+                return true;
+            }
+            , mention: false
+            , ticket: false
+            , url: false
+        }
+    });
 }
 
 function build() {
@@ -416,29 +426,27 @@ function build() {
 
     const pages = {};
     const blogEntries = {};
+    const hashtags = {};
 
     glob.sync('./src/pages/**/*.@(html|md)', { cwd }).forEach(filename => {
         const parsed = path.parse(filename);
         const objPath = parsed.dir.split(/\//g).slice(3);
         const content = readFile(filename);
-        const $body = getDOMBody(parsed.ext === '.md' ? getSanitizedHTML(content) : content);
+        const $body = getDOMBody(
+            transformHashtags(
+                hashtags
+                , ['pages'].concat(objPath, parsed.name)
+                , parsed.ext === '.md' ? getSanitizedHTML(content) : content
+            )
+        );
         const title = getTitle($body);
-        const pageValues = {
-            $body: BEMify(highlight($body))
-            , title
-            , type: 'file'
-            , url: getURL(title)
-        };
+        const pageValues = { $body: BEMify(highlight($body)), title, type: 'file', url: getURL(title) };
 
         if (title !== null) {
             if (objPath.length === 0) {
                 pages[parsed.name] = pageValues;
             } else {
-                _.set(pages, objPath, {
-                    ..._.get(pages, objPath, {})
-                    , type: 'folder'
-                    , [parsed.name]: pageValues
-                });
+                _.set(pages, objPath, { ..._.get(pages, objPath, {}), type: 'folder', [parsed.name]: pageValues });
             }
         }
     });
@@ -446,7 +454,13 @@ function build() {
     glob.sync('./src/blog/**/*.@(html|md)', { cwd }).forEach((filename, i) => {
         const parsed = path.parse(filename);
         const content = readFile(filename);
-        const $body = getDOMBody(parsed.ext === '.md' ? getSanitizedHTML(content) : content);
+        const $body = getDOMBody(
+            transformHashtags(
+                hashtags
+                , ['blogEntries'].concat(parsed.base)
+                , parsed.ext === '.md' ? getSanitizedHTML(content) : content
+            )
+        );
         const title = getTitle($body);
         const datetime = getDatetime($body);
         const anchor = getURL(`${datetime.machine}-${title}`);
@@ -465,7 +479,7 @@ function build() {
 
     const blogEntriesValues = Object.values(blogEntries);
 
-    if (Object.keys(pages).length > 0 || blogEntriesValues.length > 0) {
+    if (Object.keys(pages).length > 0 || blogEntriesValues.length > 0 || Object.keys(hashtags).length > 0) {
         const assetsSource = path.resolve(cwd, './src/assets');
         const assetsTarget = path.resolve(cwd, './docs/assets');
         fs.copySync(assetsSource, assetsTarget);
@@ -486,19 +500,13 @@ function build() {
             , style: 'compressed'
         });
         const sassTarget = path.resolve(cwd, './docs/assets/css/styles.css');
-        fs.writeFileSync(
-            sassTarget
-            , postcss([autoprefixer]).process(css).css
-            , 'utf8'
-        );
+        fs.writeFileSync( sassTarget, postcss([autoprefixer]).process(css).css, 'utf8' );
         fancyLog(c.green(`${sassTarget} written.`));
 
         const header = handlebars.compile(readFile(path.resolve(cwd, './src/global/header.hbs')));
         const footer = handlebars.compile(readFile(path.resolve(cwd, './src/global/footer.hbs')));
 
-        const blogEntriesValuesSort = blogEntriesValues.sort(
-            (a, b) => b.datetime - a.datetime
-        ).map(
+        const blogEntriesValuesSort = blogEntriesValues.sort((a, b) => b.datetime - a.datetime).map(
             (blogEntry, i) => ({
                 ..._.omit(blogEntry, ['$body'])
                 , html: findLinks(getHTML(blogEntry.$body), pages, blogEntries).innerHTML
@@ -506,11 +514,18 @@ function build() {
                 , short: findLinks(getShort(blogEntry.$body), pages, blogEntries).innerHTML
             })
         );
+        const hashtagsSorted = Object.keys(hashtags).sort((a, b) => {
+            // first sort by overall count descending
+            if (hashtags[b].count < hashtags[a].count) { return -1; }
+            if (hashtags[b].count > hashtags[a].count) { return 1; }
+            // then sort alphabetically ascending
+            if (a < b) { return -1; }
+            if (a > b) { return 1; }
+            return 0;
+        });
         const navigation = {
-            blog: blogEntriesValuesSort.map(blogEntry => ({
-                title: blogEntry.title
-                , url: blogEntry.url
-            }))
+            blog: blogEntriesValuesSort.map(blogEntry => _.omit(blogEntry, ['$body', 'html', 'short']))
+            , hashtags: hashtagsSorted.map(hashtag => ({ ..._.omit(hashtags[hashtag], ['pagesEntries']), hashtag }))
             , pages: getPagesNavigation(pages, [], [], pages, blogEntries, header, footer)
         };
 
@@ -528,12 +543,8 @@ function build() {
                 ...tplVars
                 , blogType: 'entry'
                 , entry: blogEntry
-                , nextEntry: i < tplVars.totalEntries
-                    ? blogEntriesValuesSort[i + 1]
-                    : false
-                , previousEntry: i > 0
-                    ? blogEntriesValuesSort[i - 1]
-                    : false
+                , nextEntry: i < tplVars.totalEntries ? blogEntriesValuesSort[i + 1] : false
+                , previousEntry: i > 0 ? blogEntriesValuesSort[i - 1] : false
             };
 
             writeFile(
