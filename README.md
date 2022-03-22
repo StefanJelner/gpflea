@@ -126,6 +126,7 @@ On the first run, the skeleton becomes copied into the `./src` folder. The initi
 - assets.json
 - blog.hbs
 - hashtag.hbs
+- page.hbs
 ```
 
 This is not a lot of biolerplate!

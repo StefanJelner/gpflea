@@ -1,5 +1,5 @@
 {{#if (eq blogType 'list')}}
-    {{> pagination}}
+    {{> pagination type='blog'}}
 
     <ul class="blog">
         {{#each entries}}
@@ -12,7 +12,7 @@
         {{/each}}
     </ul>
 
-    {{> pagination}}
+    {{> pagination type='blog'}}
 {{else}}
     {{{entry.html}}}
 

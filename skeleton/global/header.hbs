@@ -26,10 +26,10 @@
 </head>
 <body>
     <aside class="aside">
-        <a class="link--homepage" href="/">Homepage</a>
-        {{#if (and navigation.pages (gt navigation.pages.length 0))}}
+        <a class="link link--homepage" href="/">Homepage</a>
+        {{#if (and navigation.pages.nested (gt navigation.pages.nested.length 0))}}
             <nav class="navigation">
-                {{> navigation pages=navigation.pages level=1}}
+                {{> navigation pages=navigation.pages.nested level=1}}
             </nav>
         {{/if}}
         {{#if (and navigation.blog (gt navigation.blog.length 0))}}

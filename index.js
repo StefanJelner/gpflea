@@ -6,7 +6,7 @@
  */
 const _ = require('lodash');
 const autoprefixer = require('autoprefixer');
-const blogEntriesPerPage = 10;
+const blogEntriesPerPage = 1;
 // it has to be an odd number, otherwise there is no middle
 const blogPaginationWindow = 9;
 const c = require('ansi-colors');
@@ -33,10 +33,7 @@ const mila = require("markdown-it-link-attributes");
 const { minify } = require('html-minifier');
 const open = require('open');
 const path = require('path');
-const ports = {
-    livereloadServer: 3001
-    , webServer: 3000
-};
+const ports = { livereloadServer: 3001, webServer: 3000 };
 const postcss = require('postcss');
 const pressAnyKey = require('press-any-key');
 const sanitizeHtml = require('sanitize-html');
@@ -129,9 +126,7 @@ function getURL(title) { return title.toLowerCase().replace(/[^a-z0-9\-]+/g, '-'
 function getDatetime($body) {
     const $datetime = $body.querySelector('time[datetime]');
 
-    if ($datetime !== null) {
-        return { machine: $datetime.getAttribute('datetime'), human: $datetime.innerHTML };
-    }
+    if ($datetime !== null) { return { machine: $datetime.getAttribute('datetime'), human: $datetime.innerHTML }; }
 
     return null;
 }
@@ -291,7 +286,9 @@ function iteratePages(pagesPartial, indexes, level, urlPrefixes, titles, pages, 
     });
 }
 
-function writePages(pagesPartial, urlPrefixes, titles, pages, blogEntries, header, footer, navigation) {
+function writePages(pagesPartial, urlPrefixes, titles, pages, blogEntries, header, footer, pageIndex, navigation) {
+    let i = 0;
+
     iteratePages(pagesPartial, [], 0, urlPrefixes, titles, pages, blogEntries, header, footer, (
         page
         , indexes
@@ -308,14 +305,28 @@ function writePages(pagesPartial, urlPrefixes, titles, pages, blogEntries, heade
             , type: 'page'
         };
 
-        writeFile(path.resolve(cwd, `./docs/${
-            urlPrefixes2.concat(urlPrefixes2[urlPrefixes2.length - 1] !== page.url ? page.url : []).join('-')
-        }.html`), header2, footer2, tplVars, findLinks(page.$body, pages2, blogEntries2).innerHTML);
+        writeFile(
+            path.resolve(cwd, `./docs/${
+                urlPrefixes2.concat(urlPrefixes2[urlPrefixes2.length - 1] !== page.url ? page.url : []).join('-')
+            }.html`)
+            , header2
+            , footer2
+            , tplVars
+            , pageIndex({
+                ..._.omit(tplVars, ['type'])
+                , html: findLinks(page.$body, pages2, blogEntries2).innerHTML
+                , previousPage: i > 0 ? navigation.pages.flattened[i - 1] : false
+                , nextPage: i < navigation.pages.flattened.length - 1 ? navigation.pages.flattened[i + 1] : false
+            })
+        );
+
+        i++;
     });
 }
 
 function getPagesNavigation(pages, urlPrefixes, titles, pages, blogEntries, header, footer) {
-    const navigation = [];
+    const nested = [];
+    const flattened = [];
 
     iteratePages(pages, [], 0, urlPrefixes, titles, pages, blogEntries, header, footer, (
         page
@@ -325,15 +336,17 @@ function getPagesNavigation(pages, urlPrefixes, titles, pages, blogEntries, head
     ) => {
         const titles3 = titles2.concat(titles2[titles2.length - 1] !== page.title ? page.title : []);
         const urlPrefixes3 = urlPrefixes2.concat(urlPrefixes2[urlPrefixes2.length - 1] !== page.url ? page.url : []);
+        const url = `/${urlPrefixes3.join('-')}.html`;
 
-        _.set(navigation, indexes, { titles: titles3 , url: `/${urlPrefixes3.join('-')}.html` });
+        _.set(nested, indexes, { titles: titles3 , url });
+        flattened.push({ titles: titles3, url });
     });
 
-    return navigation;
+    return { flattened, nested };
 }
 
 function getBlogIndex(prefix, i, anchor) {
-    return `${prefix}index${(i > 0 ? `-${i + 1}` : '')}.html${typeof anchor !== 'undefined' ? `#${anchor}` : ''}`;
+    return `${prefix}${(i > 0 ? `blog-${i + 1}` : 'index')}.html${typeof anchor !== 'undefined' ? `#${anchor}` : ''}`;
 }
 
 function getHTML($body) {
@@ -368,15 +381,15 @@ function getShort($body) {
     return $body;
 }
 
-function getHashtagURL(hashtag) {
-    return `/hashtag-${getURL(hashtag)}.html`;
+function getHashtagURL(hashtag, i) {
+    return `/hashtag-${getURL(hashtag)}${i > 0 ? `-${i}` : ''}.html`;
 }
 
 function transformHashtags(hashtags, objPath, html) {
     return linkifyHtml(html, {
         formatHref: {
             hashtag: (href, type) => {
-                if (type === 'hashtag') { return getHashtagURL(href.slice(1)); }
+                if (type === 'hashtag') { return getHashtagURL(href.slice(1), 0); }
               
                 return href;
             }
@@ -388,7 +401,7 @@ function transformHashtags(hashtags, objPath, html) {
                 const objPathFlattened = objPath.join('/');
 
                 if (!(hashtag in hashtags)) {
-                    hashtags[hashtag] = { count: 0, pagesEntries: {}, url: getHashtagURL(hashtag) };
+                    hashtags[hashtag] = { count: 0, pagesEntries: {}, url: getHashtagURL(hashtag, 0) };
                 }
 
                 if (!(objPathFlattened in hashtags[hashtag].pagesEntries)) {
@@ -406,6 +419,13 @@ function transformHashtags(hashtags, objPath, html) {
         }
     });
 }
+
+handlebars.registerHelper('getIndex', (type, i) => {
+    if (type === 'blog') { return getBlogIndex('/', i); }
+    if (type === 'hashtag') { return getHashtagURL(i); }
+
+    return '/';
+});
 
 function build() {
     fancyLog('Build started.');
@@ -565,14 +585,14 @@ function build() {
             const tplVarsList = {
                 ...tplVars
                 , blogType: 'list'
-                , currentPage: i + 1
+                , currentPage: i
                 , entries: blogEntriesValuesSort
                 , firstIndex
                 , lastIndex
                 , window: Array.from({ length: blogPaginationWindow }).reduce((result, empty, j) => {
-                    const k = windowStart - windowMiddle + j + 1;
+                    const k = windowStart - windowMiddle + j;
 
-                    if (k <= tplVars.totalPages) { return result.concat(k); }
+                    if (k < tplVars.totalPages) { return result.concat(k); }
 
                     return result;
                 }, [])
@@ -587,7 +607,7 @@ function build() {
             );
 
             fs.writeFileSync(
-                path.resolve(cwd, `./docs/lazy-loading-${i + 1}.json`)
+                path.resolve(cwd, `./docs/blog-lazy-loading-${i + 1}.json`)
                 , JSON.stringify({
                     currentPage: i + 1
                     , entriesPerPage: tplVars.entriesPerPage
@@ -600,7 +620,8 @@ function build() {
             );
         }
 
-        writePages(pages, [], [], pages, blogEntries, header, footer, navigation);
+        const pageIndex = handlebars.compile(readFile(path.resolve(cwd, './src/page.hbs')));
+        writePages(pages, [], [], pages, blogEntries, header, footer, pageIndex, navigation);
     }
 
     fancyLog(c.green('Build finished.'));
@@ -628,9 +649,7 @@ app.listen(ports.webServer, () => {
                         buildDebounced();
                         watcher.add(Object.keys(assets));
                     });
-                } else {
-                    buildDebounced();
-                }
+                } else { buildDebounced(); }
             }
         }
     );
@@ -639,7 +658,5 @@ app.listen(ports.webServer, () => {
 
     fancyLog(`Open ${c.magenta(url)} in your browser to browse your static pages.`);
 
-    pressAnyKey(c.red('Or press any key to open it automatically.\n')).then(() => {
-        open(url);
-    });
+    pressAnyKey(c.red('Or press any key to open it automatically.\n')).then(() => open(url));
 });

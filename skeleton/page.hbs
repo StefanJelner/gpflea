@@ -1,0 +1,20 @@
+{{{html}}}
+
+<nav class="prev-next">
+    <ul class="prev-next__list">
+        {{#if previousPage}}
+            <li class="prev-next__list__item prev-next__list__item--previous">
+                <a class="prev-next__list__item__link" href="{{previousPage.url}}">
+                    {{#each previousPage.titles}}{{#if @last}}{{this}}{{/if}}{{/each}}
+                </a>
+            </li>
+        {{/if}}
+        {{#if nextPage}}
+            <li class="prev-next__list__item prev-next__list__item--next">
+                <a class="prev-next__list__item__link" href="{{nextPage.url}}">
+                    {{#each nextPage.titles}}{{#if @last}}{{this}}{{/if}}{{/each}}
+                </a>
+            </li>
+        {{/if}}
+    </ul>
+</nav>
