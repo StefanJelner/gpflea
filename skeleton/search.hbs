@@ -1,0 +1,33 @@
+<script type="text/javascript" src="/assets/js/handlebars.runtime.min.js"></script>
+<script type="text/javascript" src="/assets/js/didyoumean.js"></script>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    {{{handlebarsHelpers}}}
+    var tpl = Handlebars.template({{{precompiledSearchResultsTemplate}}});
+    
+    var q = '', results = [], $search = document.getElementById('search');
+
+    if ($search !== null) {
+        // check whether search term is in the URL
+        if (typeof URLSearchParams !== 'undefined') {
+            q = new URLSearchParams(location.search.slice(1)).get('q').trim();
+        }
+
+        if (q !== '') {
+            // set search forms in the rest of the DOM to the query string
+            var $qs = document.querySelectorAll('.search-form__q');
+
+            if ($qs !== null) { Array.from($qs).forEach(function($q) { $q.value = q; }); }
+
+            // load search index with AJAX
+
+            // calculate results
+            console.log(didYouMean);
+        }
+
+        // show results with precompiled Handlebars template
+        $search.innerHTML = tpl({ results: results, q: q });
+    }
+});
+</script>
+<div class="search-results" id="search"></div>

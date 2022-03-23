@@ -33,6 +33,8 @@ The purpose of gpFlea is, to provide the ability to create a GitHub Pages page w
 
 All the user needs to know is how to install a node module, create folders and files, write Markdown or HTML, add CSS styling and publish the result to GitHub.
 
+Of course gpFlea can be used with any other hosting service. You can take the resulting `docs` folder and upload it anywhere you like (with FTP, SSH, SFTP, WebDAV or any other transfer method) or you can zip the folder and send it somewhere.
+
 ---
 
 ## <a name="features"></a> Features
@@ -43,6 +45,7 @@ All the user needs to know is how to install a node module, create folders and f
 - The blog is paginated by 10 and numbered JSON files - each containing 10 entries - are provided for lazy loading.
 - Blog entries can optionally contain a short version for the list and a long version for the details view.
 - Finds hashtags and generates pages which show in which articles a hashtag is used.
+- Generates a search index in JSON and provides an AJAX and Javacript based fuzzy search ([Levenshtein distance algorithm](https://en.wikipedia.org/wiki/Levenshtein_distance)) with extended search patterns like `OR`, `AND` and `NOT`.
 - Pages and blog entries can be written in Markdown or - if more sophisticated things like custom CSS or JS are needed - also in HTML.
 - Does syntax highlighting in code blocks.
 - No login required.
@@ -52,10 +55,10 @@ All the user needs to know is how to install a node module, create folders and f
 - Starts up an [express](https://github.com/expressjs/express) webserver.
 - Watches on file changes, then reloads the page in the browser.
 - Generates static pages with SEO friendly file names.
-- Header, footer and blog entries are generated from [Handlebars](https://handlebarsjs.com/) files.
+- Header, footer, navigation, pagination and blog entries, pages, hashtag pages and search results are generated from [Handlebars](https://handlebarsjs.com/) templates.
 - All language specific data of gpFlea is in the [Handlebars](https://handlebarsjs.com/) templates.
 - Uses [Sass](https://sass-lang.com/) for providing CSS. (In the [Sass](https://sass-lang.com/) file pure CSS can be used, if someone is not familiar with [Sass](https://sass-lang.com/).)
-- HTML, inline CSS and inline JS are compressed.
+- HTML, CSS and JSON are prettified so they work better with git diffing and do not bloat the git history.
 - CSS from [Sass](https://sass-lang.com/) compilation contains autoprefixing for the recent 2 browser generations.
 - [BEM](http://getbem.com/introduction/) classes are automatically added to the HTML.
 - Resolution of links in the final static pages is done automatically.
@@ -68,7 +71,6 @@ All the user needs to know is how to install a node module, create folders and f
 - Complete `README.md`.
 - [JSDoc](https://jsdoc.app/) comments.
 - Unit tests with [Jest](https://jestjs.io/).
-- Adding an external search service
 - Examples with [Disqus](https://disqus.com/pricing/) integration (and similar services) into the blog.
 
 ---
@@ -127,6 +129,8 @@ On the first run, the skeleton becomes copied into the `./src` folder. The initi
 - blog.hbs
 - hashtag.hbs
 - page.hbs
+- search.hbs
+- search-results.hbs
 ```
 
 This is not a lot of biolerplate!
@@ -149,6 +153,8 @@ Be aware of the fact, that there is no styling at all. If you look at the initia
 - [chokidar](https://github.com/paulmillr/chokidar) - Watching for changes in the file system
 - [livereload](https://github.com/napcs/node-livereload) - Reloading the webpage after changes/rebulding
 - [sass](https://github.com/sass/sass) - Modularizing and nesting CSS
+- [didyoumean2](https://github.com/foray1010/didyoumean2) - Matching with [Levenshtein distance algorithm](https://en.wikipedia.org/wiki/Levenshtein_distance)
+- [prettier](https://github.com/prettier/prettier) - Prettifying HTML and CSS so it works better with git Diffing
 
 ---
 

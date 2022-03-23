@@ -6,7 +6,7 @@
  */
 const _ = require('lodash');
 const autoprefixer = require('autoprefixer');
-const blogEntriesPerPage = 1;
+const blogEntriesPerPage = 10;
 // it has to be an odd number, otherwise there is no middle
 const blogPaginationWindow = 9;
 const c = require('ansi-colors');
@@ -15,9 +15,10 @@ const express = require('express');
 const fancyLog = require('fancy-log');
 const fs = require('fs-extra');
 const glob = require('glob');
-const handlebars = require("handlebars");
+const Handlebars = require('handlebars');
 const hljs = require('highlight.js');
 const { JSDOM } = require('jsdom');
+const JSONstringify = (value) => JSON.stringify(value, null ,4);
 const linkify = require('linkifyjs');
 const linkifyHtml = require('linkify-html');
 require('linkify-plugin-hashtag');
@@ -30,12 +31,12 @@ const md = require('markdown-it')({
     , linkify: false
 });
 const mila = require("markdown-it-link-attributes");
-const { minify } = require('html-minifier');
 const open = require('open');
 const path = require('path');
 const ports = { livereloadServer: 3001, webServer: 3000 };
 const postcss = require('postcss');
 const pressAnyKey = require('press-any-key');
+const prettier = require('prettier');
 const sanitizeHtml = require('sanitize-html');
 const sass = require('sass');
 const { debounce } = require('throttle-debounce');
@@ -91,8 +92,19 @@ const cwd = process.cwd();
 const package = require(path.resolve(__dirname, './package.json'));
 
 if (fs.existsSync(path.resolve(cwd, './src')) === false) {
+    // copying the skeleton folder into the src folder
     fs.copySync(path.resolve(__dirname, './skeleton'), path.resolve(cwd, './src'));
     fancyLog(c.green('Skeleton folder copied.'));
+
+    // copying the files from the skeleton.json into the src folder
+    const skeleton = require(path.resolve(__dirname, './skeleton.json'));
+    Object.keys(skeleton).forEach(source => {
+        const target = path.resolve(cwd, './src/assets', skeleton[source]);
+        source = path.resolve(__dirname, source);
+
+        fs.copySync(source, target);
+        fancyLog(c.green(`${source} copied to ${target}.`));
+    });
 }
 
 let assets = require(path.resolve(cwd, './src/assets.json'));
@@ -107,10 +119,8 @@ function getSanitizedHTML(markdown) {
     }));
 }
 
-function getDOMBody(html) {
-    return new JSDOM(
-        `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /></head><body>${html}</body></html>`
-    ).window.document.body;
+function getDOM(html) {
+    return new JSDOM(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /></head><body>${html}</body></html>`);
 }
 
 function getTitle($body) {
@@ -189,10 +199,15 @@ function addGenerator() {
 function writeFile(filename, header, footer, tplVars, content) {
     fs.writeFileSync(
         filename
-        , minify(
-            header(tplVars) + content + footer(tplVars)
-            , { collapseWhitespace: true, minifyCSS: true, minifyJS: true, removeComments: true }
-        ).replace(/(<\/head>)/i, `${getLivereloadHTML()}${addGenerator()}$1`)
+        , prettier.format(
+            (header(tplVars) + content + footer(tplVars)).replace(
+                /(<\/head>)/i
+                , `${getLivereloadHTML()}${addGenerator()}$1`
+            )
+            , {
+                parser: 'html'
+            }
+        )
         , 'utf8'
     );
     fancyLog(c.green(`${filename} written.`));
@@ -247,9 +262,11 @@ function iteratePages(pagesPartial, indexes, level, urlPrefixes, titles, pages, 
                     const title = `Index missing in /${urlPrefixes.concat(page).join('/')}`;
 
                     pagesPartial[page].index = {
-                        $body: getDOMBody(`<h1>${
-                            title
-                        }</h1><p>Please add a index.md or index.html file with at least one h1 headline.</p>`)
+                        $body: getDOM(
+                            `<h1>${
+                                title
+                            }</h1><p>Please add a index.md or index.html file with at least one h1 headline.</p>`
+                        ).window.document.body
                         , title
                         , type: 'file'
                         , url: getURL(`index-missing-${page}`)
@@ -299,7 +316,7 @@ function writePages(pagesPartial, urlPrefixes, titles, pages, blogEntries, heade
         , header2
         , footer2
     ) => {
-        const tplVars = {
+        const tplVarsPage = {
             navigation
             , titles: titles2.concat(titles2[titles2.length - 1] !== page.title ? page.title : [])
             , type: 'page'
@@ -311,9 +328,9 @@ function writePages(pagesPartial, urlPrefixes, titles, pages, blogEntries, heade
             }.html`)
             , header2
             , footer2
-            , tplVars
+            , tplVarsPage
             , pageIndex({
-                ..._.omit(tplVars, ['type'])
+                ..._.omit(tplVarsPage, ['type'])
                 , html: findLinks(page.$body, pages2, blogEntries2).innerHTML
                 , previousPage: i > 0 ? navigation.pages.flattened[i - 1] : false
                 , nextPage: i < navigation.pages.flattened.length - 1 ? navigation.pages.flattened[i + 1] : false
@@ -420,7 +437,36 @@ function transformHashtags(hashtags, objPath, html) {
     });
 }
 
-handlebars.registerHelper('getIndex', (type, i) => {
+function getSearchTerms(search, dom, $body, objPath) {
+    const objPathFlattened = objPath.join('/');
+    const treeWalker = dom.window.document.createTreeWalker(
+        $body
+        , dom.window.NodeFilter.SHOW_TEXT
+        , { acceptNode: () => dom.window.NodeFilter.FILTER_ACCEPT }
+        , false
+    );
+
+    while (treeWalker.nextNode()) {
+        const trimmed = treeWalker.currentNode.wholeText.trim();
+
+        if (trimmed !== '') {
+            const chunks = trimmed.toLowerCase().split(/\W+/g).filter(word => word.length > 2);
+
+            chunks.forEach(chunk => {
+                if (!(chunk in search.terms)) { search.terms[chunk] = { count: 0, pagesEntries: {} }; }
+                if (!(objPathFlattened in search.terms[chunk].pagesEntries)) {
+                    search.terms[chunk].pagesEntries[objPathFlattened] = { count: 0, objPath };
+                }
+
+                search.count++;
+                search.terms[chunk].count++;
+                search.terms[chunk].pagesEntries[objPathFlattened].count++;
+            });
+        }
+    }
+}
+
+Handlebars.registerHelper('getIndex', (type, i) => {
     if (type === 'blog') { return getBlogIndex('/', i); }
     if (type === 'hashtag') { return getHashtagURL(i); }
 
@@ -434,11 +480,15 @@ function build() {
     fs.emptyDirSync(docsTarget);
     fancyLog(c.green(`${docsTarget} folder emtpied.`));
 
+    let handlebarsHelpers = '';
     glob.sync('./src/handlebars/helpers/**/*.js', { cwd }).forEach(filename => {
-        require(path.resolve(cwd, filename))(handlebars);
+        const helperFilename = path.resolve(cwd, filename);
+
+        require(helperFilename)(Handlebars);
+        handlebarsHelpers += readFile(helperFilename);
     });
     glob.sync('./src/handlebars/partials/**/*.hbs', { cwd }).forEach(filename => {
-        handlebars.registerPartial(path.parse(filename).name, readFile(path.resolve(cwd, filename)));
+        Handlebars.registerPartial(path.parse(filename).name, readFile(path.resolve(cwd, filename)));
     });
     fancyLog(c.green('Handlebars set up.'));
     
@@ -447,22 +497,27 @@ function build() {
     const pages = {};
     const blogEntries = {};
     const hashtags = {};
+    const search = { count: 0, terms: {} };
 
     glob.sync('./src/pages/**/*.@(html|md)', { cwd }).forEach(filename => {
         const parsed = path.parse(filename);
         const objPath = parsed.dir.split(/\//g).slice(3);
+        const extendedObjPath = ['pages'].concat(objPath, parsed.name);
         const content = readFile(filename);
-        const $body = getDOMBody(
+        const dom = getDOM(
             transformHashtags(
                 hashtags
-                , ['pages'].concat(objPath, parsed.name)
+                , extendedObjPath
                 , parsed.ext === '.md' ? getSanitizedHTML(content) : content
             )
         );
+        const $body = dom.window.document.body;
         const title = getTitle($body);
         const pageValues = { $body: BEMify(highlight($body)), title, type: 'file', url: getURL(title) };
 
         if (title !== null) {
+            getSearchTerms(search, dom, $body, extendedObjPath);
+
             if (objPath.length === 0) {
                 pages[parsed.name] = pageValues;
             } else {
@@ -474,18 +529,22 @@ function build() {
     glob.sync('./src/blog/**/*.@(html|md)', { cwd }).forEach((filename, i) => {
         const parsed = path.parse(filename);
         const content = readFile(filename);
-        const $body = getDOMBody(
+        const extendedObjPath = ['blogEntries'].concat(parsed.base);
+        const dom = getDOM(
             transformHashtags(
                 hashtags
-                , ['blogEntries'].concat(parsed.base)
+                , extendedObjPath
                 , parsed.ext === '.md' ? getSanitizedHTML(content) : content
             )
         );
+        const $body = dom.window.document.body;
         const title = getTitle($body);
         const datetime = getDatetime($body);
         const anchor = getURL(`${datetime.machine}-${title}`);
 
         if (datetime !== null) {
+            getSearchTerms(search, dom, $body, extendedObjPath);
+
             blogEntries[parsed.base] = {
                 $body: BEMify(highlight($body))
                 , anchor
@@ -517,14 +576,18 @@ function build() {
 
         const { css } = sass.compile(path.resolve(cwd, './src/scss/styles.scss'), {
             loadPaths: [path.resolve(cwd, './node_modules'), path.resolve(cwd, './src/scss')]
-            , style: 'compressed'
+            , style: 'expanded'
         });
         const sassTarget = path.resolve(cwd, './docs/assets/css/styles.css');
-        fs.writeFileSync( sassTarget, postcss([autoprefixer]).process(css).css, 'utf8' );
+        fs.writeFileSync(
+            sassTarget
+            , prettier.format(postcss([autoprefixer]).process(css).css, { parser: 'css' })
+            , 'utf8'
+        );
         fancyLog(c.green(`${sassTarget} written.`));
 
-        const header = handlebars.compile(readFile(path.resolve(cwd, './src/global/header.hbs')));
-        const footer = handlebars.compile(readFile(path.resolve(cwd, './src/global/footer.hbs')));
+        const header = Handlebars.compile(readFile(path.resolve(cwd, './src/global/header.hbs')));
+        const footer = Handlebars.compile(readFile(path.resolve(cwd, './src/global/footer.hbs')));
 
         const blogEntriesValuesSort = blogEntriesValues.sort((a, b) => b.datetime - a.datetime).map(
             (blogEntry, i) => ({
@@ -549,21 +612,20 @@ function build() {
             , pages: getPagesNavigation(pages, [], [], pages, blogEntries, header, footer)
         };
 
-        const blogIndex = handlebars.compile(readFile(path.resolve(cwd, './src/blog.hbs')));
-        const tplVars = {
+        const blogIndex = Handlebars.compile(readFile(path.resolve(cwd, './src/blog.hbs')));
+        const tplVarsBlog = {
             entriesPerPage: blogEntriesPerPage
             , navigation
             , totalEntries: blogEntriesValuesSort.length
             , totalPages: Math.ceil(blogEntriesValuesSort.length / blogEntriesPerPage)
             , type: 'blog'
         };
-
         blogEntriesValuesSort.forEach((blogEntry, i) => {
-            const tplVarsEntry = {
-                ...tplVars
+            const tplVarsBlogEntry = {
+                ...tplVarsBlog
                 , blogType: 'entry'
                 , entry: blogEntry
-                , nextEntry: i < tplVars.totalEntries ? blogEntriesValuesSort[i + 1] : false
+                , nextEntry: i < tplVarsBlog.totalEntries ? blogEntriesValuesSort[i + 1] : false
                 , previousEntry: i > 0 ? blogEntriesValuesSort[i - 1] : false
             };
 
@@ -571,19 +633,18 @@ function build() {
                 path.resolve(cwd,  `./docs${blogEntry.url}`)
                 , header
                 , footer
-                , tplVarsEntry
-                , blogIndex(tplVarsEntry)
+                , tplVarsBlogEntry
+                , blogIndex(tplVarsBlogEntry)
             );
         });
 
         const windowMiddle = Math.ceil(blogPaginationWindow / 2);
-
-        for (let i = 0; i < tplVars.totalPages; i++) {
-            const firstIndex = i * tplVars.entriesPerPage;
-            const lastIndex = Math.min(firstIndex + tplVars.entriesPerPage, tplVars.totalEntries) - 1;
-            const windowStart = Math.max(windowMiddle, Math.min(tplVars.totalPages - windowMiddle + 1, i + 1));
-            const tplVarsList = {
-                ...tplVars
+        for (let i = 0; i < tplVarsBlog.totalPages; i++) {
+            const firstIndex = i * tplVarsBlog.entriesPerPage;
+            const lastIndex = Math.min(firstIndex + tplVarsBlog.entriesPerPage, tplVarsBlog.totalEntries) - 1;
+            const windowStart = Math.max(windowMiddle, Math.min(tplVarsBlog.totalPages - windowMiddle + 1, i + 1));
+            const tplVarsBlogList = {
+                ...tplVarsBlog
                 , blogType: 'list'
                 , currentPage: i
                 , entries: blogEntriesValuesSort
@@ -592,7 +653,7 @@ function build() {
                 , window: Array.from({ length: blogPaginationWindow }).reduce((result, empty, j) => {
                     const k = windowStart - windowMiddle + j;
 
-                    if (k < tplVars.totalPages) { return result.concat(k); }
+                    if (k < tplVarsBlog.totalPages) { return result.concat(k); }
 
                     return result;
                 }, [])
@@ -602,26 +663,42 @@ function build() {
                 path.resolve(cwd, getBlogIndex('./docs/', i))
                 , header
                 , footer
-                , tplVarsList
-                , blogIndex(tplVarsList)
+                , tplVarsBlogList
+                , blogIndex(tplVarsBlogList)
             );
 
             fs.writeFileSync(
                 path.resolve(cwd, `./docs/blog-lazy-loading-${i + 1}.json`)
-                , JSON.stringify({
+                , JSONstringify({
                     currentPage: i + 1
-                    , entriesPerPage: tplVars.entriesPerPage
-                    , totalEntries: tplVars.totalEntries
-                    , totalPages: tplVars.totalPages
-                    , entriesPerPage: tplVars.entriesPerPage
+                    , entriesPerPage: tplVarsBlog.entriesPerPage
+                    , totalEntries: tplVarsBlog.totalEntries
+                    , totalPages: tplVarsBlog.totalPages
+                    , entriesPerPage: tplVarsBlog.entriesPerPage
                     , entries: blogEntriesValuesSort.slice(firstIndex, lastIndex + 1)
                 })
                 , 'utf8'
             );
         }
 
-        const pageIndex = handlebars.compile(readFile(path.resolve(cwd, './src/page.hbs')));
+        const pageIndex = Handlebars.compile(readFile(path.resolve(cwd, './src/page.hbs')));
         writePages(pages, [], [], pages, blogEntries, header, footer, pageIndex, navigation);
+
+        const searchIndex = Handlebars.compile(readFile(path.resolve(cwd, './src/search.hbs')));
+        const precompiledSearchResults = Handlebars.precompile(readFile(path.resolve(cwd, './src/search-results.hbs')));
+
+        const tplVarsSearch = { navigation, type: 'search' }
+        writeFile(
+            path.resolve(cwd, './docs/search.html')
+            , header
+            , footer
+            , tplVarsSearch
+            , searchIndex({
+                ...tplVarsSearch
+                , handlebarsHelpers
+                , precompiledSearchResultsTemplate: precompiledSearchResults
+            })
+        );
     }
 
     fancyLog(c.green('Build finished.'));

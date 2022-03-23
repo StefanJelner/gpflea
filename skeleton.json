@@ -1,0 +1,4 @@
+{
+    "./node_modules/handlebars/dist/handlebars.runtime.min.js": "js/handlebars.runtime.min.js"
+    , "./node_modules/didyoumean2/dist/index.umd.js": "js/didyoumean.js"
+}

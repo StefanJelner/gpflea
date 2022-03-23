@@ -11,7 +11,13 @@
 
 see https://gist.github.com/servel333/21e1eedbd70db5a7cfff327526c72bc5
 */
-module.exports = function(handlebars) {
+(function(func) {
+    if (typeof window === 'object') {
+        func(window.Handlebars);
+    } else {
+        module.exports = func;
+    }
+})(function(Handlebars) {
     const reduceOp = function(args, reducer){
         args = Array.from(args);
         args.pop(); // => options
@@ -20,15 +26,14 @@ module.exports = function(handlebars) {
         return args.reduce(reducer, first);
     };
 
-    handlebars.registerHelper({
-        // IMPORTANT! THIS DOES NOT WORK WITH ARROW FUNCTIONS!
-        eq  : function() { return reduceOp(arguments, (a, b) => a === b); }
-        , ne  : function() { return reduceOp(arguments, (a, b) => a !== b); }
-        , lt  : function() { return reduceOp(arguments, (a, b) => a  <  b); }
-        , gt  : function() { return reduceOp(arguments, (a, b) => a  >  b); }
-        , lte : function() { return reduceOp(arguments, (a, b) => a  <= b); }
-        , gte : function() { return reduceOp(arguments, (a, b) => a  >= b); }
-        , and : function() { return reduceOp(arguments, (a, b) => a  && b); }
-        , or  : function() { return reduceOp(arguments, (a, b) => a  || b); }
+    Handlebars.registerHelper({
+        eq  : function() { return reduceOp(arguments, function(a, b) { return a === b; }.bind(this)); }
+        , ne  : function() { return reduceOp(arguments, function(a, b) { return a !== b; }.bind(this)); }
+        , lt  : function() { return reduceOp(arguments, function(a, b) { return a  <  b; }.bind(this)); }
+        , gt  : function() { return reduceOp(arguments, function(a, b) { return a  >  b; }.bind(this)); }
+        , lte : function() { return reduceOp(arguments, function(a, b) { return a  <= b; }.bind(this)); }
+        , gte : function() { return reduceOp(arguments, function(a, b) { return a  >= b; }.bind(this)); }
+        , and : function() { return reduceOp(arguments, function(a, b) { return a  && b; }.bind(this)); }
+        , or  : function() { return reduceOp(arguments, function(a, b) { return a  || b; }.bind(this)); }
     });
-}
+});

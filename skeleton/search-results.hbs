@@ -1,0 +1,12 @@
+<form class="search-results__form search-form" action="/search.html" method="GET">
+    <input class="search-form__q" type="text" name="q" value="{{q}}" />
+    <input class="search-form__submit" type="submit" value="Search" />
+</form>
+{{#if (gt results.length 0)}}
+    <h1 class="search-results__headline headline headline--level1">Search results</h1>
+    {{#each results}}
+    {{/each}}
+{{else}}
+    <h1 class="search-results__headline headline headline--level1">No results found</h1>
+    <p class="search-results__paragraph paragraph">Please try a different combination of search terms.</p>
+{{/if}}

@@ -18,6 +18,8 @@
             {{else}}
                 - {{entry.subtitle}} - {{entry.title}}
             {{/if}}
+        {{else if (eq type 'search')}}
+            - Search results
         {{else}}
             {{#each titles}} - {{this}}{{/each}}
         {{/if}}
@@ -26,6 +28,10 @@
 </head>
 <body>
     <aside class="aside">
+        <form class="search-form" action="/search.html" method="GET">
+            <input class="search-form__q" type="text" name="q" value="" />
+            <input class="search-form__submit" type="submit" value="Search" />
+        </form>
         <a class="link link--homepage" href="/">Homepage</a>
         {{#if (and navigation.pages.nested (gt navigation.pages.nested.length 0))}}
             <nav class="navigation">

@@ -1,6 +1,12 @@
 // see http://jsfiddle.net/mpetrovich/wMmHS/
-module.exports = function(handlebars) {
-    handlebars.registerHelper('math', (lvalue, operator, rvalue) => {
+(function(func) {
+    if (typeof window === 'object') {
+        func(window.Handlebars);
+    } else {
+        module.exports = func;
+    }
+})(function(Handlebars) {
+    Handlebars.registerHelper('math', function(lvalue, operator, rvalue) {
         lvalue = parseFloat(lvalue);
         rvalue = parseFloat(rvalue);
         return {
@@ -18,4 +24,4 @@ module.exports = function(handlebars) {
             '>>>': lvalue >>> rvalue
         }[operator];
     });
-}
+});
