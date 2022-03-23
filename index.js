@@ -18,7 +18,6 @@ const glob = require('glob');
 const Handlebars = require('handlebars');
 const hljs = require('highlight.js');
 const { JSDOM } = require('jsdom');
-const JSONstringify = (value) => JSON.stringify(value, null ,4);
 const linkify = require('linkifyjs');
 const linkifyHtml = require('linkify-html');
 require('linkify-plugin-hashtag');
@@ -213,6 +212,8 @@ function writeFile(filename, header, footer, tplVars, content) {
     fancyLog(c.green(`${filename} written.`));
 }
 
+function pageJoin(objPath) { return objPath.join('-'); }
+
 function findLinks($body, pages, blogEntries) {
     const $links = $body.querySelectorAll('a[href^="/pages/"],a[href^="/blog/"]');
 
@@ -224,13 +225,13 @@ function findLinks($body, pages, blogEntries) {
                 const objPath = parsed.dir.split(/\//g).slice(2);
 
                 $link.href = `${
-                        Array.from({ length: objPath.length }).reduce((result, empty, i) => {
+                    pageJoin(Array.from({ length: objPath.length }).reduce((result, empty, i) => {
                         const url = _.get(pages, objPath.slice(0, i + 1).concat('index', 'url'), null);
 
                         if (url !== null) { return result.concat(url); }
 
                         return result;
-                    }, []).join('-')
+                    }, []))
                 }.html`;
             }
 
@@ -243,7 +244,19 @@ function findLinks($body, pages, blogEntries) {
     return $body;
 }
 
-function iteratePages(pagesPartial, indexes, level, urlPrefixes, titles, pages, blogEntries, header, footer, callback) {
+function iteratePages(
+    pagesPartial
+    , indexes
+    , level
+    , objPath
+    , urlPrefixes
+    , titles
+    , pages
+    , blogEntries
+    , header
+    , footer
+    , callback
+) {
     const pagesPartialSortedKeys = Object.keys(pagesPartial).sort((a, b) => {
         if (a === 'index' || a < b) { return - 1; }
         if (a > b) { return 1; }
@@ -277,6 +290,7 @@ function iteratePages(pagesPartial, indexes, level, urlPrefixes, titles, pages, 
                     pagesPartial[page]
                     , indexes.concat('pages', i - (level === 0 ? 0 : 1))
                     , level + 1
+                    , objPath.concat(page)
                     , urlPrefixes.concat(pagesPartial[page].index.url)
                     , titles.concat(pagesPartial[page].index.title)
                     , pages
@@ -291,6 +305,7 @@ function iteratePages(pagesPartial, indexes, level, urlPrefixes, titles, pages, 
                     , (
                         page === 'index' ? indexes : indexes.concat('pages', i - (indexes.length === 0 ? 0 : 1))
                     ).slice(1)
+                    , objPath.concat(page)
                     , urlPrefixes
                     , titles
                     , pages
@@ -306,9 +321,10 @@ function iteratePages(pagesPartial, indexes, level, urlPrefixes, titles, pages, 
 function writePages(pagesPartial, urlPrefixes, titles, pages, blogEntries, header, footer, pageIndex, navigation) {
     let i = 0;
 
-    iteratePages(pagesPartial, [], 0, urlPrefixes, titles, pages, blogEntries, header, footer, (
+    iteratePages(pagesPartial, [], 0, [], urlPrefixes, titles, pages, blogEntries, header, footer, (
         page
         , indexes
+        , objPath
         , urlPrefixes2
         , titles2
         , pages2
@@ -324,7 +340,7 @@ function writePages(pagesPartial, urlPrefixes, titles, pages, blogEntries, heade
 
         writeFile(
             path.resolve(cwd, `./docs/${
-                urlPrefixes2.concat(urlPrefixes2[urlPrefixes2.length - 1] !== page.url ? page.url : []).join('-')
+                pageJoin(urlPrefixes2.concat(urlPrefixes2[urlPrefixes2.length - 1] !== page.url ? page.url : []))
             }.html`)
             , header2
             , footer2
@@ -341,22 +357,27 @@ function writePages(pagesPartial, urlPrefixes, titles, pages, blogEntries, heade
     });
 }
 
-function getPagesNavigation(pages, urlPrefixes, titles, pages, blogEntries, header, footer) {
+function getPagesNavigation(pages, urlPrefixes, titles, pages, blogEntries, header, footer, search) {
     const nested = [];
     const flattened = [];
 
-    iteratePages(pages, [], 0, urlPrefixes, titles, pages, blogEntries, header, footer, (
+    iteratePages(pages, [], 0, [], urlPrefixes, titles, pages, blogEntries, header, footer, (
         page
         , indexes
+        , objPath
         , urlPrefixes2
         , titles2
     ) => {
         const titles3 = titles2.concat(titles2[titles2.length - 1] !== page.title ? page.title : []);
         const urlPrefixes3 = urlPrefixes2.concat(urlPrefixes2[urlPrefixes2.length - 1] !== page.url ? page.url : []);
-        const url = `/${urlPrefixes3.join('-')}.html`;
+        const url = `/${pageJoin(urlPrefixes3)}.html`;
 
         _.set(nested, indexes, { titles: titles3 , url });
         flattened.push({ titles: titles3, url });
+
+        const objPath2 = JSON.stringify(objPath);
+        const i = search.p.indexOf(objPath2);
+        if (i !== -1) { search.p[i] = { titles: titles3, url }; }
     });
 
     return { flattened, nested };
@@ -438,7 +459,6 @@ function transformHashtags(hashtags, objPath, html) {
 }
 
 function getSearchTerms(search, dom, $body, objPath) {
-    const objPathFlattened = objPath.join('/');
     const treeWalker = dom.window.document.createTreeWalker(
         $body
         , dom.window.NodeFilter.SHOW_TEXT
@@ -450,17 +470,24 @@ function getSearchTerms(search, dom, $body, objPath) {
         const trimmed = treeWalker.currentNode.wholeText.trim();
 
         if (trimmed !== '') {
-            const chunks = trimmed.toLowerCase().split(/\W+/g).filter(word => word.length > 2);
+            const ts = trimmed.toLowerCase().split(/\W+/g).filter(word => /^[a-z]{3,}$/.test(word));
 
-            chunks.forEach(chunk => {
-                if (!(chunk in search.terms)) { search.terms[chunk] = { count: 0, pagesEntries: {} }; }
-                if (!(objPathFlattened in search.terms[chunk].pagesEntries)) {
-                    search.terms[chunk].pagesEntries[objPathFlattened] = { count: 0, objPath };
+            ts.forEach(t => {
+                if (!(t in search.t)) { search.t[t] = { c: 0, b: {}, p: {} }; }
+                const bp = objPath[0] === 'blogEntries' ? 'b' : 'p';
+                const objPath2 = JSON.stringify(objPath.slice(1));
+                let i = search[bp].indexOf(objPath2);
+
+                if (i === -1) {
+                    search[bp].push(objPath2);
+                    i = search[bp].length - 1;
                 }
 
-                search.count++;
-                search.terms[chunk].count++;
-                search.terms[chunk].pagesEntries[objPathFlattened].count++;
+                if (!(String(i) in search.t[t][bp])) { search.t[t][bp][i] = 0; }
+
+                search.c++;
+                search.t[t].c++;
+                search.t[t][bp][i]++;
             });
         }
     }
@@ -497,7 +524,7 @@ function build() {
     const pages = {};
     const blogEntries = {};
     const hashtags = {};
-    const search = { count: 0, terms: {} };
+    const search = { c: 0, b: [], p: [], t: {} };
 
     glob.sync('./src/pages/**/*.@(html|md)', { cwd }).forEach(filename => {
         const parsed = path.parse(filename);
@@ -609,7 +636,7 @@ function build() {
         const navigation = {
             blog: blogEntriesValuesSort.map(blogEntry => _.omit(blogEntry, ['$body', 'html', 'short']))
             , hashtags: hashtagsSorted.map(hashtag => ({ ..._.omit(hashtags[hashtag], ['pagesEntries']), hashtag }))
-            , pages: getPagesNavigation(pages, [], [], pages, blogEntries, header, footer)
+            , pages: getPagesNavigation(pages, [], [], pages, blogEntries, header, footer, search)
         };
 
         const blogIndex = Handlebars.compile(readFile(path.resolve(cwd, './src/blog.hbs')));
@@ -669,14 +696,14 @@ function build() {
 
             fs.writeFileSync(
                 path.resolve(cwd, `./docs/blog-lazy-loading-${i + 1}.json`)
-                , JSONstringify({
+                , prettier.format(JSON.stringify({
                     currentPage: i + 1
                     , entriesPerPage: tplVarsBlog.entriesPerPage
                     , totalEntries: tplVarsBlog.totalEntries
                     , totalPages: tplVarsBlog.totalPages
                     , entriesPerPage: tplVarsBlog.entriesPerPage
                     , entries: blogEntriesValuesSort.slice(firstIndex, lastIndex + 1)
-                })
+                }), { parser: 'json' })
                 , 'utf8'
             );
         }
@@ -698,6 +725,15 @@ function build() {
                 , handlebarsHelpers
                 , precompiledSearchResultsTemplate: precompiledSearchResults
             })
+        );
+
+        fs.writeFileSync(
+            path.resolve(cwd, `./docs/search.json`)
+            , prettier.format(JSON.stringify({
+                ...search
+                , b: search.b.map(objPath => _.omit(_.get(blogEntries, JSON.parse(objPath), {}), ['$body']))
+            }), { parser: 'json' })
+            , 'utf8'
         );
     }
 

@@ -4,29 +4,56 @@
 document.addEventListener('DOMContentLoaded', function() {
     {{{handlebarsHelpers}}}
     var tpl = Handlebars.template({{{precompiledSearchResultsTemplate}}});
-    
-    var q = '', results = [], $search = document.getElementById('search');
+    var $search = document.getElementById('search');
 
     if ($search !== null) {
-        // check whether search term is in the URL
-        if (typeof URLSearchParams !== 'undefined') {
-            q = new URLSearchParams(location.search.slice(1)).get('q').trim();
-        }
+        new Promise(function(resolve) {
+            var q = '';
 
-        if (q !== '') {
-            // set search forms in the rest of the DOM to the query string
-            var $qs = document.querySelectorAll('.search-form__q');
+            // check whether search term is in the URL
+            if (typeof URLSearchParams !== 'undefined') {
+                q = new URLSearchParams(location.search.slice(1)).get('q').trim();
+            }
 
-            if ($qs !== null) { Array.from($qs).forEach(function($q) { $q.value = q; }); }
+            if (q !== '') {
+                // set search forms in the rest of the DOM to the query string
+                var $qs = document.querySelectorAll('.search-form__q');
 
-            // load search index with AJAX
+                if ($qs !== null) { Array.from($qs).forEach(function($q) { $q.value = q; }); }
 
-            // calculate results
-            console.log(didYouMean);
-        }
+                // load search index with AJAX
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', '/search.json');
 
-        // show results with precompiled Handlebars template
-        $search.innerHTML = tpl({ results: results, q: q });
+                xhr.onreadystatechange = function() {
+                    // DONE
+                    if (xhr.readyState === 4) {
+                        // OK
+                        if (xhr.status === 200) {
+                            var index = null;
+
+                            try {
+                                index = JSON.parse(xhr.responseText);
+                            } catch(ex) {}
+
+                            if (index !== null) {
+                                // calculate results
+
+                                console.log(index);
+                                console.log(didYouMean);
+
+                                resolve({ result: [], q: q });
+                            } else { resolve({ result: [], q: q }); }
+                        } else { resolve({ result: [], q: q }); }
+                    }
+                };
+
+                xhr.send(null);
+            } else { resolve({ result: [], q: q }); }
+        }).then(function(results) {
+            // show results with precompiled Handlebars template
+            $search.innerHTML = tpl(results);
+        });
     }
 });
 </script>
