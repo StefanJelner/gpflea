@@ -1014,10 +1014,9 @@ app.listen(ports.webServer, () => {
                 fancyLog(`${c.magenta(event)} event on ${c.magenta(path2)}`);
 
                 if (event === 'change' && path2 === path.resolve(cwd, './src/assets.json')) {
-                    watcher.unwatch(Object.keys(assets)).then(() => {
-                        buildDebounced();
-                        watcher.add(Object.keys(assets));
-                    });
+                    watcher.unwatch(Object.keys(assets));
+                    buildDebounced();
+                    watcher.add(Object.keys(assets));
                 } else { buildDebounced(); }
             }
         }
