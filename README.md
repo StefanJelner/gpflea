@@ -157,6 +157,7 @@ Be aware of the fact, that there is no styling at all. If you look at the initia
 - [sass](https://github.com/sass/sass) - Modularizing and nesting CSS
 - [didyoumean2](https://github.com/foray1010/didyoumean2) - Matching with [Levenshtein distance algorithm](https://en.wikipedia.org/wiki/Levenshtein_distance)
 - [prettier](https://github.com/prettier/prettier) - Prettifying HTML and CSS so it works better with git Diffing
+- [node-emoji](https://github.com/omnidan/node-emoji) - Changing emojis in Unicode or GitHub notation to PNG images
 
 ---
 
