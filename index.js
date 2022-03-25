@@ -10,6 +10,7 @@ const _ = require('lodash');
 const autoprefixer = require('autoprefixer');
 const c = require('ansi-colors');
 const chokidar = require('chokidar');
+const emoji = require('node-emoji');
 const express = require('express');
 const fancyLog = require('fancy-log');
 const fs = require('fs-extra');
@@ -242,15 +243,20 @@ function build() {
         const title = getTitle($body);
 
         if (title !== null) {
-            const pageValues = { $body: BEMify(highlight($body)), title, type: 'file', url: getURL(title) };
-
-            getSearchTerms(search, dom, $body, extendedObjPath);
+            const pageValues = {
+                $body: BEMify(replaceEmojis(dom, highlight($body)))
+                , title
+                , type: 'file'
+                , url: getURL(title)
+            };
 
             if (objPath.length === 0) {
                 pages[parsed.name] = pageValues;
             } else {
                 _.set(pages, objPath, { ..._.get(pages, objPath, {}), type: 'folder', [parsed.name]: pageValues });
             }
+
+            getSearchTerms(search, dom, $body, extendedObjPath);
         }
     });
 
@@ -273,16 +279,16 @@ function build() {
         if (title !== null && datetime !== null) {
             const anchor = getURL(`${datetime.machine}-${title}`);
 
-            getSearchTerms(search, dom, $body, extendedObjPath);
-
             blogEntries[parsed.base] = {
-                $body: BEMify(highlight($body))
+                $body: BEMify(replaceEmojis(dom, highlight($body)))
                 , anchor
                 , datetime: new Date(datetime.machine)
                 , subtitle: datetime.human
                 , title
                 , url: `/${anchor}.html`
             };
+
+            getSearchTerms(search, dom, $body, extendedObjPath);
         }
     });
 
@@ -882,6 +888,39 @@ function pageJoin(objPath) { return objPath.join('-'); }
 
 function readFile(filename) { return fs.readFileSync(filename, 'utf8').replace(/\r\n/g, '\n'); }
 
+function replaceEmojis(dom, $body) {
+    const treeWalker = dom.window.document.createTreeWalker(
+        $body
+        , dom.window.NodeFilter.SHOW_TEXT
+        , { acceptNode: () => dom.window.NodeFilter.FILTER_ACCEPT }
+        , false
+    );
+
+    while (treeWalker.nextNode()) {
+        // create an empty div element
+        const $tmp = dom.window.document.createElement('div');
+
+        // try to find emojis in the pure text node and put the resulting HTML into the empty div
+        $tmp.innerHTML = emoji.emojify(
+            treeWalker.currentNode.wholeText
+            , name => name
+            , (code, name) => `<img class="image--emoji" src="https://github.githubassets.com/images/icons/emoji/${
+                name
+            }.png" alt="${code}" />`
+        );
+
+        // if the div element contains more then one node, at least one emoji was found
+        if ($tmp.childNodes.length > 1) {
+            // replace the node with the new nodes
+            treeWalker.currentNode.replaceWith(
+                dom.window.document.createRange().createContextualFragment($tmp.innerHTML)
+            );
+        }
+    }
+
+    return $body;
+}
+
 function writeFile(filename, header, footer, tplVars, content) {
     fs.writeFileSync(
         filename
@@ -890,9 +929,7 @@ function writeFile(filename, header, footer, tplVars, content) {
                 /(<\/head>)/i
                 , `${getLivereloadHTML()}${addGenerator()}$1`
             )
-            , {
-                parser: 'html'
-            }
+            , { parser: 'html' }
         )
         , 'utf8'
     );
