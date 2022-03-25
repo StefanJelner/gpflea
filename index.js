@@ -29,7 +29,7 @@ const md = require('markdown-it')({
     // that is explicitely false.
     , linkify: false
 });
-const mila = require("markdown-it-link-attributes");
+const mila = require('markdown-it-link-attributes');
 const open = require('open');
 const path = require('path');
 const postcss = require('postcss');
@@ -115,8 +115,11 @@ process.on('uncaughtException', error => {
 
 // --- registering ---
 
-// adds additional attributes to links after MArkdown conversion
-md.use(mila, { attrs: { target: '_blank', rel: 'noopener'}});
+// adds additional attributes to links after Markdown conversion
+md.use(mila, {
+    attrs: { target: '_blank', rel: 'noopener'}
+    , matcher: function(href) { return /^https?:\/\//i.test(href); }
+});
 
 // registers the getIndex helper for blog and hashtag paginations
 Handlebars.registerHelper('getIndex', (type, hashtag, i) => {
@@ -587,14 +590,22 @@ function findLinks($body, pages, blogEntries) {
             const parsed = path.parse($link.href);
 
             if ($link.href.slice(0, 7) === '/pages/') {
-                const objPath = parsed.dir.split(/\//g).slice(2);
+                const objPath = parsed.dir.split(/\//g).slice(2).concat(parsed.name);
 
-                $link.href = `${
+                $link.href = `/${
                     pageJoin(Array.from({ length: objPath.length }).reduce((result, empty, i) => {
-                        const url = _.get(pages, objPath.slice(0, i + 1).concat('index', 'url'), null);
-
-                        if (url !== null) { return result.concat(url); }
-
+                        const objPath2 = objPath.slice(0, i + 1);
+    
+                        if (objPath2[objPath2.length - 1] !== 'index') {
+                            const fileFolder = _.get(pages, objPath2, null);
+    
+                            if (fileFolder !== null) {
+                                const url = _.get(fileFolder, fileFolder.type === 'folder' ? 'index.url': 'url', null);
+    
+                                if (url !== null) { return result.concat(url); }
+                            }
+                        }
+    
                         return result;
                     }, []))
                 }.html`;
