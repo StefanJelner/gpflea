@@ -1,1 +1,24 @@
-<ul class="hashtag"></ul>
+{{> pagination type='hashtag' hashtag=hashtag}}
+
+<ul class="hashtag">
+    {{#each occurences}}
+        {{#if (and (gte @index ../firstIndex) (lte @index ../lastIndex))}}
+            <li class="hashtag__item">
+                <a class="hashtag__item__link" href="{{this.url}}">
+                    <span class="hashtag__item__link__title">
+                        {{#if (eq this.occurenceType 'page')}}
+                            {{#each this.titles}}{{#if @last}}{{this}}{{/if}}{{/each}}
+                        {{else}}
+                            {{this.subtitle}} - {{this.title}}
+                        {{/if}}
+                    </span>
+                    <span class="hashtag__item__link__count">
+                        ({{this.count}} occurence{{#if (ne this.count 1)}}s{{/if}})
+                    </span>
+                </a>
+            </li>
+        {{/if}}
+    {{/each}}
+</ul>
+
+{{> pagination type='hashtag' hashtag=hashtag}}

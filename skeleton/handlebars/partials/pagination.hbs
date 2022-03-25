@@ -5,7 +5,7 @@
                 pagination__list__item
                 pagination__list__item--first
                 {{#if (lte currentPage 0)}}pagination__list__item--disabled{{/if}}">
-                <a class="pagination__list__item__link" href="{{getIndex type 0}}">First</a>
+                <a class="pagination__list__item__link" href="{{getIndex type hashtag 0}}">First</a>
             </li>
             <li class="
                 pagination__list__item
@@ -14,7 +14,11 @@
             ">
                 <a
                     class="pagination__list__item__link"
-                    href="{{#if (lte currentPage 1)}}{{getIndex type 0}}{{else}}{{getIndex type (math currentPage '-' 1)}}{{/if}}"
+                    href="{{#if (lte currentPage 1)}}{{
+                        getIndex type hashtag 0
+                    }}{{else}}{{
+                        getIndex type hashtag (math currentPage '-' 1)
+                    }}{{/if}}"
                 >Previous</a>
             </li>
             {{#each window}}
@@ -25,7 +29,11 @@
                 ">
                     <a
                         class="pagination__list__item__link"
-                        href="{{#if (lte this 0)}}{{getIndex ../type 0}}{{else}}{{getIndex ../type this}}{{/if}}"
+                        href="{{#if (lte this 0)}}{{
+                            getIndex ../type ../hashtag 0
+                        }}{{else}}{{
+                            getIndex ../type ../hashtag this
+                        }}{{/if}}"
                     >{{math this '+' 1}}</a>
                 </li>
             {{/each}}
@@ -36,7 +44,11 @@
             ">
                 <a
                     class="pagination__list__item__link"
-                    href="{{#if (gte currentPage (math totalPages '-' 2))}}{{getIndex type (math totalPages '-' 1)}}{{else}}{{getIndex type (math currentPage '+' 1)}}{{/if}}"
+                    href="{{#if (gte currentPage (math totalPages '-' 2))}}{{
+                        getIndex type hashtag (math totalPages '-' 1)
+                    }}{{else}}{{
+                        getIndex type hashtag (math currentPage '+' 1)
+                    }}{{/if}}"
                 >Next</a>
             </li>
             <li class="
@@ -44,7 +56,9 @@
                 pagination__list__item--last
                 {{#if (gte currentPage (math totalPages '-' 1))}} pagination__list__item--disabled{{/if}}
             ">
-                <a class="pagination__list__item__link" href="{{getIndex type (math totalPages '-' 1)}}">Last</a>
+                <a class="pagination__list__item__link" href="{{
+                    getIndex type hashtag (math totalPages '-' 1)
+                }}">Last</a>
             </li>
         </ul>
     </nav>

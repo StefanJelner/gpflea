@@ -18,10 +18,11 @@ gpFlea (GitHub Pages Flea) is a superdupertiny flea size zero config static site
   4. [Editing pages](#editing-pages)
   5. [Editing blog entries](#editing-blog-entries)
   6. [Using hashtags](#using-hashtags)
-  7. [Adding syntax highlighting](#syntax-highlighting)
-  8. [Blog pagination or lazy loading](#blog-pagination-lazy-loading)
-  9. [Handlebars partials and helpers](#handlebars-partials-helpers)
-  10. [Advanced Sass Techniques (BEM)](#sass-bem)
+  7. [Using emojis](#using-emojis)
+  8. [Adding syntax highlighting](#syntax-highlighting)
+  9. [Blog pagination or lazy loading](#blog-pagination-lazy-loading)
+  10. [Handlebars partials and helpers](#handlebars-partials-helpers)
+  11. [Advanced Sass Techniques (BEM)](#sass-bem)
 - [Technologies](#technologies)
 - [License](#license)
 
@@ -42,12 +43,13 @@ Of course gpFlea can be used with any other hosting service. You can take the re
 - Zero config - **really zero!**
 - Everything is done by convention. (See [Convention over configuration](https://en.wikipedia.org/wiki/Convention_over_configuration).)
 - Provides a blog on the homepage and unlimited nested pages.
+- Pages and blog entries can be written in Markdown or - if more sophisticated things like custom CSS or JS are needed - also in HTML.
 - The blog is paginated by 10 and numbered JSON files - each containing 10 entries - are provided for lazy loading.
 - Blog entries can optionally contain a short version for the list and a long version for the details view.
 - Finds hashtags and generates pages which show in which articles a hashtag is used.
-- Generates a search index in JSON and provides an AJAX and Javacript based fuzzy search ([Levenshtein distance algorithm](https://en.wikipedia.org/wiki/Levenshtein_distance)) with extended search patterns like `OR`, `AND` and `NOT`.
-- Pages and blog entries can be written in Markdown or - if more sophisticated things like custom CSS or JS are needed - also in HTML.
+- Finds emojis by unicode or GitHub notation and replaces them with images.
 - Does syntax highlighting in code blocks.
+- Generates a search index in JSON and provides an AJAX and Javacript based fuzzy search ([Levenshtein distance algorithm](https://en.wikipedia.org/wiki/Levenshtein_distance)) with extended search patterns like `OR`, `AND` and `NOT`.
 - No login required.
 - No backend needed.
 - Everything is done on the file level.

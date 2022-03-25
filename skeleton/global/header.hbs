@@ -7,7 +7,7 @@
         {{#if (eq type 'blog')}}
             {{#if (eq blogType 'list')}}
                 - Blog ({{totalEntries}} entries)
-                - Page {{currentPage}}
+                - Page {{math currentPage '+' 1}}
                 (entries
                 {{math firstIndex '+' 1}}
                 to
@@ -18,6 +18,16 @@
             {{else}}
                 - {{entry.subtitle}} - {{entry.title}}
             {{/if}}
+        {{else if (eq type 'hashtag')}}
+            - Hashtag #{{hashtag}} ({{totalEntries}} occurences)
+            - Page {{math currentPage '+' 1}}
+            (occurences
+            {{math firstIndex '+' 1}}
+            to
+            {{math lastIndex '+' 1}},
+            {{#with (lookup occurences firstIndex)}}{{this.subtitle}}{{/with}}
+            to
+            {{#with (lookup occurences lastIndex)}}{{this.subtitle}}{{/with}})
         {{else if (eq type 'search')}}
             - Search results
         {{else}}
