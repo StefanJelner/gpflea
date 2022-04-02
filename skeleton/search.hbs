@@ -35,55 +35,176 @@ document.addEventListener('DOMContentLoaded', function() {
                                     // foo "bar" +baz +"qux" -waldo -"thud" + corge" - +"grault -"xyzzy +1234 -1234
                                     var parsedQ = _parseQ(q);
 
-                                    // get hits for all terms
-                                    var hits = _getHits(parsedQ, index);
+                                    // get result for all terms
+                                    var results = _getResults(parsedQ, index);
 
-                                    // calculate results
-                                    resolve({ result: [], q: q });
-                                } else { resolve({ result: [], q: q }); }
-                            } else { resolve({ result: [], q: q }); }
+                                    resolve({ results: results, q: q });
+                                } else { resolve({ results: [], q: q }); }
+                            } else { resolve({ results: [], q: q }); }
                         }
                     };
 
                     xhr.send(null);
-                } else { resolve({ result: [], q: q }); }
+                } else { resolve({ results: [], q: q }); }
             }).then(function(results) {
                 // show results with precompiled Handlebars template
                 $search.innerHTML = tpl(results);
             });
         }
 
-        function _getHits(parsedQ, index) {
+        function _getQ() {
+            // check whether search term is in the URL
+            return typeof URLSearchParams !== 'undefined'
+                ? new URLSearchParams(location.search.slice(1)).get('q').trim().toLowerCase()
+                : ''
+            ;
+        }
+
+        function _getQueryString(terms) {
+            return typeof URLSearchParams !== 'undefined'
+                ? '?' + new URLSearchParams({ m: JSON.stringify(terms) }).toString()
+                : ''
+            ;
+        }
+
+        function _getResults(parsedQ, index) {
             var terms = Object.keys(index.t);
 
-            return Object.keys(parsedQ).reduce(function(hits, key) {
+            var hits = Object.keys(parsedQ).reduce(function(hits, key) {
                 var tmp = {};
 
+                // we store the original term in the shorthand ot, because the fuzzy search results might contain
+                // a different term, because "bass" also fuzzy matches "bash".
                 tmp[key] = parsedQ[key].reduce(function(hits2, data) {
-                    return hits2.concat(
-                        (
-                            data.fuzzy === true
-                                ? didYouMean.default(data.term, terms, {
-                                    returnType: didYouMean.ReturnTypeEnums.ALL_CLOSEST_MATCHES
-                                })
-                                : terms.filter(function(term) { return term.indexOf(data.term) !== -1; })
-                        ).map(function(term) { return index.t[term]; })
-                    );
+                    var hits3 = (
+                        data.fuzzy === true
+                            // the fuzzy matching lacks matching whether the term literally exists somewhere in
+                            // the terms. this is why both methods get mixed up here and then the result array
+                            // has to be uniqued.
+                            ? didYouMean.default(data.term, terms, {
+                                returnType: didYouMean.ReturnTypeEnums.ALL_CLOSEST_MATCHES
+                            }).concat(
+                                terms.filter(function(term) { return term.indexOf(data.term) !== -1; })
+                            ).filter(function(term, i, arr) { return arr.indexOf(term) === i; })
+                            : terms.filter(function(term) { return term.indexOf(data.term) !== -1; })
+                    ).map(function(term) { return Object.assign({}, index.t[term], { ot: data.term, t: term }); });
+
+                    return hits2.concat(hits3.length > 0 ? hits3 : { b: {}, c: 0, ot: data.term, p: {}, t: data.term });
                 }, []);
 
                 return Object.assign({}, hits, tmp);
             }, {});
-        }
 
-        function _getQ() {
-            var q = '';
+            // AND is a quite hard thing, because if one AND condition is not met, the whole result is empty.
+            // this is why we test for this here first to safe us time and energy.
+            if (hits.and.some(function(hit) { return hit.c === 0; })) { return []; }
 
-            // check whether search term is in the URL
-            if (typeof URLSearchParams !== 'undefined') {
-                q = new URLSearchParams(location.search.slice(1)).get('q').trim().toLowerCase();
-            }
+            var cummulated = ['and', 'not', 'or'].reduce(function(result, key) {
+                var tmp = {};
 
-            return q;
+                tmp[key] = ['b', 'p'].reduce(function(result2, key2) {
+                    var tmp2 = {};
+
+                    tmp2[key2] = hits[key].reduce(function(result3, values) {
+                        return Object.assign({}, result3, Object.keys(values[key2]).reduce(function(result4, key3) {
+                            var tmp3 = {};
+                            var terms = {};
+                            terms[values.t] = values[key2][key3];
+
+                            tmp3[key3] = (
+                                key3 in result3
+                                    ? Object.assign(
+                                        {}
+                                        , result3[key3]
+                                        , {
+                                            count: result3[key3].count + values[key2][key3]
+                                            , originalTerms: result3[key3].originalTerms.concat(
+                                                result3[key3].originalTerms.indexOf(values.ot) === -1 ? values.ot : []
+                                            )
+                                            , terms: Object.assign({}, result3[key3].terms, terms)
+                                        }
+                                    )
+                                    : Object.assign(
+                                        {}
+                                        , index[key2][key3]
+                                        , {
+                                            count: values[key2][key3]
+                                            , originalTerms: [values.ot]
+                                            , terms: terms
+                                        }
+                                    )
+                            );
+
+                            return Object.assign({}, result4, tmp3);
+                        }, {}));
+                    }, {});
+
+                    return Object.assign({}, result2, tmp2);
+                }, {});
+
+                return Object.assign({}, result, tmp);
+            }, {});
+
+            var andQLength = parsedQ.and.map(function(value) { return value.term; }).length;
+            var filtered = ['b', 'p'].reduce(function(result, key) {
+                var tmp = {};
+                var andKeys = Object.keys(cummulated.and[key]);
+                var notKeys = Object.keys(cummulated.not[key]);
+
+                tmp[key] = Object.keys(cummulated.or[key]).reduce(function(result2, key2) {
+                    if (
+                        (
+                            andKeys.length === 0
+                            || (
+                                andKeys.indexOf(key2) !== -1
+                                && cummulated.and[key][key2].originalTerms.length === andQLength
+                            )
+                        )
+                        && (notKeys.length === 0 || notKeys.indexOf(key2) === -1)
+                    ) {
+                        var tmp2 = {};
+
+                        tmp2[key2] = andKeys.length > 0 ? Object.assign(
+                            {}
+                            , cummulated.or[key][key2]
+                            , {
+                                count: cummulated.or[key][key2].count + cummulated.and[key][key2].count
+                                , originalTerms: cummulated.or[key][key2].originalTerms.concat(
+                                    cummulated.and[key][key2].originalTerms
+                                )
+                                , terms: Object.assign(
+                                    {}
+                                    , cummulated.or[key][key2].terms
+                                    , cummulated.and[key][key2].terms
+                                )
+                            }
+                        ) : cummulated.or[key][key2];
+
+                        return Object.assign({}, result2, tmp2);
+                    }
+
+                    return result2;
+                }, {});
+
+                return Object.assign({}, result, tmp);
+            }, {});
+
+            var mixedSorted = ['b', 'p'].reduce(function(result, key) {
+                return result.concat(Object.keys(filtered[key]).map(function(key2) {
+                    return Object.assign({}, filtered[key][key2], {
+                        queryString: _getQueryString(Object.keys(filtered[key][key2].terms))
+                        , type: key === 'b' ? 'blogEntry' : 'page'
+                    });
+                }));
+            }, []).sort(function(a, b) {
+                if (b.count < a.count) { return -1; }
+                if (b.count > a.count) { return 1; }
+                if (a.type === 'blogEntry' && b.type === 'page') { return -1; }
+                if (a.type === 'page' && b.type === 'blogEntry') { return 1; }
+                return 0;
+            });
+
+            return mixedSorted;
         }
 
         function _parseIndex(xhr) {

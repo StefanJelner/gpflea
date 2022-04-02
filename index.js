@@ -174,6 +174,8 @@ function BEMify($body) {
         , ol: ['list', 'list--ordered']
         , p: 'paragraph'
         , pre: 'preformatted'
+        , time: 'time'
+        , 'time[datetime]': 'time--datetime' 
         , ul: ['list', 'list--unordered']
     };
 

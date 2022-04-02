@@ -4,8 +4,28 @@
 </form>
 {{#if (gt results.length 0)}}
     <h1 class="search-results__headline headline headline--level1">Search results</h1>
-    {{#each results}}
-    {{/each}}
+    <ul class="search-results__list">
+        {{#each results}}
+            <li class="
+                search-results__list__item
+                search-results__list__item--{{#if (eq this.type 'blogEntry')}}blog-entry{{else}}page{{/if}}
+            ">
+                <a class="link" href="{{this.url}}{{this.queryString}}">
+                    <h2 class="search-results__list__item__title headline headline--level1">
+                        {{#if (eq this.type 'blogEntry')}}
+                            {{this.subtitle}} - {{this.title}}
+                        {{else}}
+                            {{#each this.titles}}{{#if @last}}{{this}}{{/if}}{{/each}}
+                        {{/if}}
+                    </h2>
+                    <p class="search-results__list__item__statistics paragraph">
+                        {{this.count}} hits
+                        ({{#each this.terms}}{{@key}}: {{this}}{{#unless @last}}, {{/unless}}{{/each}})
+                    </p>
+                </a>
+            </li>
+        {{/each}}
+    </ul>
 {{else}}
     <h1 class="search-results__headline headline headline--level1">No results found</h1>
     <p class="search-results__paragraph paragraph">Please try a different combination of search terms.</p>

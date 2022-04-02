@@ -17,12 +17,13 @@ gpFlea (GitHub Pages Flea) is a superdupertiny flea size zero config static site
   3. [Providing CSS and JavaScript](#css-javascript)
   4. [Editing pages](#editing-pages)
   5. [Editing blog entries](#editing-blog-entries)
-  6. [Using hashtags](#using-hashtags)
-  7. [Using emojis](#using-emojis)
-  8. [Adding syntax highlighting](#syntax-highlighting)
-  9. [Blog pagination or lazy loading](#blog-pagination-lazy-loading)
-  10. [Handlebars partials and helpers](#handlebars-partials-helpers)
-  11. [Advanced Sass Techniques (BEM)](#sass-bem)
+  6. [Linking to pages or blog entries](#editing-linking)
+  7. [Using hashtags](#using-hashtags)
+  8. [Using emojis](#using-emojis)
+  9. [Adding syntax highlighting](#syntax-highlighting)
+  10. [Blog pagination or lazy loading](#blog-pagination-lazy-loading)
+  11. [Handlebars partials and helpers](#handlebars-partials-helpers)
+  12. [Advanced Sass Techniques (BEM)](#sass-bem)
 - [Technologies](#technologies)
 - [License](#license)
 
@@ -34,7 +35,7 @@ The purpose of gpFlea is, to provide the ability to create a GitHub Pages page w
 
 All the user needs to know is how to install a node module, create folders and files, write Markdown or HTML, add CSS styling and publish the result to GitHub.
 
-Of course gpFlea can be used with any other hosting service. You can take the resulting `docs` folder and upload it anywhere you like (with FTP, SSH, SFTP, WebDAV or any other transfer method) or you can zip the folder and send it somewhere.
+Of course gpFlea can be used with any other hosting service. You can take the result in the `docs` folder and upload it anywhere you like (with FTP, SSH, SFTP, WebDAV or any other transfer method) or you can zip the folder content and send it somewhere.
 
 ---
 
