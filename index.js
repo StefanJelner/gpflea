@@ -902,6 +902,7 @@ function pageJoin(objPath) { return objPath.join('-'); }
 function readFile(filename) { return fs.readFileSync(filename, 'utf8').replace(/\r\n/g, '\n'); }
 
 function replaceEmojis(dom, $body) {
+    const textNodes = [];
     const treeWalker = dom.window.document.createTreeWalker(
         $body
         , dom.window.NodeFilter.SHOW_TEXT
@@ -909,13 +910,15 @@ function replaceEmojis(dom, $body) {
         , false
     );
 
-    while (treeWalker.nextNode()) {
+    while (treeWalker.nextNode()) { textNodes.push(treeWalker.currentNode); }
+
+    textNodes.forEach(function(textNode) {
         // create an empty div element
         const $tmp = dom.window.document.createElement('div');
 
         // try to find emojis in the pure text node and put the resulting HTML into the empty div
         $tmp.innerHTML = emoji.emojify(
-            treeWalker.currentNode.wholeText
+            textNode.wholeText
             , name => name
             , (code, name) => `<img class="image--emoji" src="https://github.githubassets.com/images/icons/emoji/${
                 name
@@ -923,13 +926,11 @@ function replaceEmojis(dom, $body) {
         );
 
         // if the div element contains more then one node, at least one emoji was found
-        if ($tmp.childNodes.length > 1) {
+        if (Array.from($tmp.childNodes).some(child => child instanceof dom.window.Element)) {
             // replace the node with the new nodes
-            treeWalker.currentNode.replaceWith(
-                dom.window.document.createRange().createContextualFragment($tmp.innerHTML)
-            );
+            textNode.replaceWith(dom.window.document.createRange().createContextualFragment($tmp.innerHTML));
         }
-    }
+    });
 
     return $body;
 }

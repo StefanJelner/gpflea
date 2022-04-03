@@ -50,7 +50,7 @@ Of course gpFlea can be used with any other hosting service. You can take the re
 - Finds hashtags and generates pages which show in which articles a hashtag is used.
 - Finds emojis by unicode or GitHub notation and replaces them with images.
 - Does syntax highlighting in code blocks.
-- Generates a search index in JSON and provides an AJAX and Javacript based fuzzy search ([Levenshtein distance algorithm](https://en.wikipedia.org/wiki/Levenshtein_distance)) with extended search patterns like `OR`, `AND` and `NOT`.
+- Generates a search index in JSON and provides an AJAX and Javacript based fuzzy search ([Levenshtein distance algorithm](https://en.wikipedia.org/wiki/Levenshtein_distance)) with extended search patterns like `OR`, `AND` and `NOT`. A page or blog entry which becomes accessed by clicking on a search result has the search terms marked in it, so they can be highlighted by CSS.
 - No login required.
 - No backend needed.
 - Everything is done on the file level.
@@ -108,6 +108,7 @@ On the first run, the skeleton becomes copied into the `./src` folder. The initi
 + assets
   + js
     - scripts.js
+    - search.js
 + blog
   - 2022-03-17-first-post.md
   - 2022-03-18-second-post.html
